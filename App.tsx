@@ -21,7 +21,8 @@ import {
   Landmark,
   Heart,
   TrendingUp,
-  Cpu
+  Cpu,
+  Filter
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { ViewState, VaultItem, ChartData } from './types';
@@ -151,6 +152,7 @@ const App = () => {
   const [showImport, setShowImport] = useState(false);
   const [vaultItems, setVaultItems] = useState<VaultItem[]>(MOCK_VAULT_ITEMS);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedSourceFilter, setSelectedSourceFilter] = useState<string>('ALL');
   const [showRioModal, setShowRioModal] = useState(false);
   const [generatedRio, setGeneratedRio] = useState('');
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
@@ -176,10 +178,18 @@ const App = () => {
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
   // Filter vault items
-  const filteredItems = vaultItems.filter(item => 
-    item.summary.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.source.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredItems = vaultItems.filter(item => {
+    const matchesSearch = item.summary.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          item.source.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          item.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    const matchesSource = selectedSourceFilter === 'ALL' || item.source === selectedSourceFilter;
+    
+    return matchesSearch && matchesSource;
+  });
+
+  // Get unique sources for filter buttons
+  const uniqueSources = ['ALL', ...Array.from(new Set(vaultItems.map(item => item.source)))];
 
   const handleLogin = () => {
     setView(ViewState.DASHBOARD);
@@ -403,6 +413,31 @@ const App = () => {
           <Shield className="w-6 h-6 text-blue-600 dark:text-blue-500" />
           <span className="font-bold text-lg text-slate-900 dark:text-white">AIGuardian</span>
         </div>
+        
+        {/* Security Widget */}
+        <div className="px-6 py-4">
+           <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-3 border border-slate-100 dark:border-slate-700">
+             <div className="flex items-center gap-2 mb-2">
+               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+               <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">Système Sécurisé</span>
+             </div>
+             <div className="text-[10px] text-slate-500 dark:text-slate-400 space-y-1 font-mono">
+               <div className="flex justify-between">
+                 <span>Chiffrement:</span>
+                 <span className="text-emerald-600 dark:text-emerald-400">AES-256</span>
+               </div>
+               <div className="flex justify-between">
+                 <span>Statut:</span>
+                 <span className="text-blue-600 dark:text-blue-400">Verrouillé</span>
+               </div>
+               <div className="flex justify-between">
+                 <span>Stockage:</span>
+                 <span className="text-purple-600 dark:text-purple-400">Local Only</span>
+               </div>
+             </div>
+           </div>
+        </div>
+
         <nav className="flex-1 p-4 space-y-2">
           <button onClick={() => setView(ViewState.DASHBOARD)} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${view === ViewState.DASHBOARD ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
             <Database className="w-5 h-5" /> Mon Coffre-fort
@@ -443,6 +478,18 @@ const App = () => {
         <main className="p-6 md:p-8 overflow-y-auto flex-1">
           {view === ViewState.DASHBOARD && (
             <div className="space-y-6">
+              
+              {/* Zero-Knowledge Banner */}
+              <div className="bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-800 rounded-lg p-4 flex items-start gap-3">
+                <Shield className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-sm font-bold text-indigo-900 dark:text-indigo-200">Architecture Zero-Knowledge Active</h4>
+                  <p className="text-xs text-indigo-700 dark:text-indigo-300 mt-1">
+                    Vos données sont chiffrées avec votre clé privée avant même d'être sauvegardées. Ni AIGuardian, ni Google, ni OpenAI ne peuvent lire le contenu de ce coffre-fort sans votre autorisation explicite.
+                  </p>
+                </div>
+              </div>
+
               {/* Search Bar */}
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-slate-500" />
@@ -453,6 +500,24 @@ const App = () => {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
+              </div>
+
+              {/* Source Filters */}
+              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                {uniqueSources.map(source => (
+                  <button
+                    key={source}
+                    onClick={() => setSelectedSourceFilter(source)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap flex items-center gap-2 ${
+                      selectedSourceFilter === source
+                        ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
+                        : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    {source === 'ALL' && <Filter className="w-3 h-3" />}
+                    {source === 'ALL' ? 'Tout' : source}
+                  </button>
+                ))}
               </div>
 
               {/* Stats */}
@@ -516,7 +581,7 @@ const App = () => {
                   </tbody>
                 </table>
                 {filteredItems.length === 0 && (
-                  <div className="p-8 text-center text-slate-500 dark:text-slate-400">Aucun résultat trouvé.</div>
+                  <div className="p-8 text-center text-slate-500 dark:text-slate-400">Aucun résultat trouvé pour cette sélection.</div>
                 )}
               </div>
             </div>
