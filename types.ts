@@ -1,9 +1,14 @@
+
 export enum ViewState {
   LANDING = 'LANDING',
   DASHBOARD = 'DASHBOARD',
   IMPORT = 'IMPORT',
   RIO = 'RIO',
-  PROFILE = 'PROFILE'
+  PROFILE = 'PROFILE',
+  SETTINGS = 'SETTINGS',
+  PRIVACY = 'PRIVACY',
+  LEGAL = 'LEGAL',
+  TERMS = 'TERMS'
 }
 
 export interface VaultItem {
@@ -28,4 +33,11 @@ export interface ChartData {
   subject: string;
   A: number;
   fullMark: number;
+}
+
+export interface AnalysisHistoryItem {
+  id: string;
+  date: string;
+  score: number;
+  summary: string;
 }
