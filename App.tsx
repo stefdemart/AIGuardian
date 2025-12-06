@@ -27,10 +27,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Trash2,
-  AlertTriangle,
-  FileJson,
-  CheckSquare,
-  Square
+  AlertTriangle
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { ViewState, VaultItem, ChartData } from './types';
@@ -116,16 +113,13 @@ interface DisplayDimension {
   icon: React.ReactNode;
 }
 
-interface ExportConfig {
-  includeAnalysis: boolean;
-  includeStats: boolean;
-  selectedSources: string[];
-}
-
 const AnimatedProgressBar: React.FC<{ dimension: DisplayDimension, delay: number }> = ({ dimension, delay }) => {
   const [width, setWidth] = useState(0);
 
   useEffect(() => {
+    // Reset width to 0 briefly when dimension.score changes to re-trigger animation feel, 
+    // or just let CSS transition handle the slide.
+    // CSS transition is smoother for value updates.
     const timer = setTimeout(() => {
       setWidth(dimension.score);
     }, delay); // Initial delay
@@ -298,14 +292,6 @@ const App = () => {
   const [is2FAOpen, setIs2FAOpen] = useState(false);
   const [pending2FAAction, setPending2FAAction] = useState<(() => void) | null>(null);
 
-  // Export Config States
-  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
-  const [exportConfig, setExportConfig] = useState<ExportConfig>({
-    includeAnalysis: true,
-    includeStats: true,
-    selectedSources: []
-  });
-
   // Delete Confirmation State
   const [itemToDelete, setItemToDelete] = useState<VaultItem | null>(null);
 
@@ -314,9 +300,6 @@ const App = () => {
     if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
       setIsDarkMode(true);
     }
-    // Initialize all sources as selected by default
-    const allSources = Array.from(new Set(MOCK_VAULT_ITEMS.map(i => i.source)));
-    setExportConfig(prev => ({ ...prev, selectedSources: allSources }));
   }, []);
 
   useEffect(() => {
@@ -342,9 +325,6 @@ const App = () => {
 
   // Get unique sources for filter buttons
   const uniqueSources = ['ALL', ...Array.from(new Set(vaultItems.map(item => item.source)))];
-  
-  // Get source counts for export modal
-  const getSourceCount = (source: string) => vaultItems.filter(i => i.source === source).length;
 
   const handleLogin = () => {
     setView(ViewState.DASHBOARD);
@@ -368,12 +348,7 @@ const App = () => {
       encryptedContent: 'EncryptedBlob_NewImport...',
       tags: ['import']
     };
-    const newItems = [newItem, ...vaultItems];
-    setVaultItems(newItems);
-    // Update default export config to include new source if not present
-    if (!exportConfig.selectedSources.includes(newItem.source)) {
-       setExportConfig(prev => ({...prev, selectedSources: [...prev.selectedSources, newItem.source]}));
-    }
+    setVaultItems([newItem, ...vaultItems]);
   };
 
   // Generic Secure Action Wrapper
@@ -421,35 +396,14 @@ const App = () => {
     setAnalyzing(false);
   };
 
-  const openExportModal = () => {
-    // Ensure all current sources are visible in the config, defaulting to current selection or all
-    const currentSources = Array.from(new Set(vaultItems.map(i => i.source)));
-    setExportConfig(prev => ({
-        ...prev,
-        // Keep existing selection if valid, otherwise add new sources
-        selectedSources: prev.selectedSources.filter(s => currentSources.includes(s)).length > 0 
-            ? prev.selectedSources 
-            : currentSources
-    }));
-    setIsExportModalOpen(true);
-  };
-
-  const executeExport = (config: ExportConfig) => {
-    // Filter items based on selected sources
-    const itemsToExport = vaultItems.filter(item => config.selectedSources.includes(item.source));
-    
+  const downloadProfile = () => {
     const profileData = {
       title: "Profil de Connaissances AIGuardian",
       date: new Date().toISOString(),
-      analysis: config.includeAnalysis ? (aiAnalysis || "Non analysé") : undefined,
-      stats: config.includeStats ? MOCK_CHART_DATA : undefined,
-      tags: config.includeStats ? Array.from(new Set(itemsToExport.flatMap(i => i.tags))) : undefined,
-      dimensions: config.includeStats ? PROFILE_DIMENSIONS_DATA : undefined,
-      vaultItems: itemsToExport, // The filtered raw data
-      exportMetadata: {
-        totalItems: itemsToExport.length,
-        sources: config.selectedSources
-      }
+      analysis: aiAnalysis || "Non analysé",
+      stats: MOCK_CHART_DATA,
+      tags: Array.from(new Set(vaultItems.flatMap(i => i.tags))),
+      dimensions: PROFILE_DIMENSIONS_DATA
     };
     
     const blob = new Blob([JSON.stringify(profileData, null, 2)], { type: 'application/json' });
@@ -461,7 +415,6 @@ const App = () => {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    setIsExportModalOpen(false);
   };
 
   const downloadEncryptedItem = (item: VaultItem) => {
@@ -841,7 +794,7 @@ const App = () => {
                         {aiAnalysis}
                       </div>
                       <button 
-                        onClick={openExportModal}
+                        onClick={() => handleSecureAction(downloadProfile)}
                         className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium transition-colors shadow-sm"
                       >
                         <Download className="w-4 h-4" /> Télécharger le Profil
@@ -980,112 +933,6 @@ const App = () => {
                 </button>
               </div>
             )}
-          </div>
-        </div>
-      )}
-
-      {/* Export Selection Modal */}
-      {isExportModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-lg w-full p-6 border border-slate-200 dark:border-slate-700 animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
-            <div className="flex justify-between items-center mb-6 shrink-0">
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Download className="w-5 h-5 text-blue-600 dark:text-blue-400" /> Configurer votre export
-              </h3>
-              <button onClick={() => setIsExportModalOpen(false)}><X className="text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors" /></button>
-            </div>
-            
-            <div className="overflow-y-auto pr-2 flex-1 space-y-6">
-               <p className="text-sm text-slate-600 dark:text-slate-300">
-                 Sélectionnez les données à inclure dans votre archive portable.
-               </p>
-
-               {/* Section Profil */}
-               <div className="space-y-3">
-                 <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Profil & Métadonnées</h4>
-                 <div className="space-y-2">
-                    <div 
-                      className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-900/50 rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors"
-                      onClick={() => setExportConfig(prev => ({ ...prev, includeAnalysis: !prev.includeAnalysis }))}
-                    >
-                      <div className="flex items-center gap-3">
-                        {exportConfig.includeAnalysis ? <CheckSquare className="w-5 h-5 text-blue-600 dark:text-blue-400" /> : <Square className="w-5 h-5 text-slate-400" />}
-                        <span className="text-sm font-medium text-slate-800 dark:text-slate-200">Analyse IA (Synthèse)</span>
-                      </div>
-                    </div>
-                    <div 
-                      className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-900/50 rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors"
-                      onClick={() => setExportConfig(prev => ({ ...prev, includeStats: !prev.includeStats }))}
-                    >
-                      <div className="flex items-center gap-3">
-                         {exportConfig.includeStats ? <CheckSquare className="w-5 h-5 text-blue-600 dark:text-blue-400" /> : <Square className="w-5 h-5 text-slate-400" />}
-                        <span className="text-sm font-medium text-slate-800 dark:text-slate-200">Statistiques & Tags</span>
-                      </div>
-                    </div>
-                 </div>
-               </div>
-
-               {/* Section Raw Data */}
-               <div className="space-y-3">
-                 <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Données Brutes (Par Source)</h4>
-                 <div className="grid grid-cols-1 gap-2">
-                    {['ChatGPT', 'Claude', 'Gemini', 'Midjourney', 'Github Copilot', 'Upload Externe'].map(source => {
-                       const count = getSourceCount(source);
-                       if (count === 0) return null;
-                       const isSelected = exportConfig.selectedSources.includes(source);
-                       
-                       return (
-                        <div 
-                          key={source}
-                          className={`flex items-center justify-between p-3 rounded-lg cursor-pointer border transition-colors ${
-                            isSelected 
-                              ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800/50' 
-                              : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
-                          }`}
-                          onClick={() => {
-                            setExportConfig(prev => {
-                              const newSources = isSelected 
-                                ? prev.selectedSources.filter(s => s !== source)
-                                : [...prev.selectedSources, source];
-                              return { ...prev, selectedSources: newSources };
-                            });
-                          }}
-                        >
-                          <div className="flex items-center gap-3">
-                            {isSelected ? <CheckSquare className="w-5 h-5 text-blue-600 dark:text-blue-400" /> : <Square className="w-5 h-5 text-slate-400" />}
-                            <span className="text-sm font-medium text-slate-800 dark:text-slate-200">{source}</span>
-                          </div>
-                          <span className="text-xs font-bold px-2 py-1 bg-white dark:bg-slate-900 rounded text-slate-500 dark:text-slate-400 border border-slate-100 dark:border-slate-800">
-                            {count}
-                          </span>
-                        </div>
-                       );
-                    })}
-                 </div>
-               </div>
-            </div>
-
-            <div className="pt-6 mt-6 border-t border-slate-100 dark:border-slate-700 shrink-0">
-               <div className="flex justify-between items-center mb-4 text-xs text-slate-500 dark:text-slate-400">
-                 <span>{exportConfig.selectedSources.length} sources sélectionnées</span>
-                 <span>Format: JSON chiffré</span>
-               </div>
-               <div className="flex gap-3">
-                 <button 
-                   onClick={() => setIsExportModalOpen(false)}
-                   className="flex-1 py-2 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white text-sm font-medium transition-colors"
-                 >
-                   Annuler
-                 </button>
-                 <button 
-                   onClick={() => handleSecureAction(() => executeExport(exportConfig))}
-                   disabled={exportConfig.selectedSources.length === 0 && !exportConfig.includeAnalysis && !exportConfig.includeStats}
-                   className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-bold transition-colors flex items-center justify-center gap-2"
-                 >
-                   Valider et Exporter
-                 </button>
-               </div>
-            </div>
           </div>
         </div>
       )}
