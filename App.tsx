@@ -14,9 +14,16 @@ import {
   FileText,
   Moon,
   Sun,
-  Loader2
+  Loader2,
+  Activity,
+  Briefcase,
+  Users,
+  Landmark,
+  Heart,
+  TrendingUp,
+  Cpu
 } from 'lucide-react';
-import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { ViewState, VaultItem, ChartData } from './types';
 import { CookieBanner } from './components/CookieBanner';
 import { ImportWizard } from './components/ImportWizard';
@@ -24,10 +31,12 @@ import { analyzeVaultData } from './services/geminiService';
 
 // Mock Data
 const MOCK_VAULT_ITEMS: VaultItem[] = [
-  { id: '1', source: 'ChatGPT', type: 'conversation', date: '2023-10-15', summary: 'Brainstorming Marketing Eco-responsable', encryptedContent: 'EncryptedBlob...', tags: ['work', 'marketing'] },
-  { id: '2', source: 'Claude', type: 'code', date: '2023-10-18', summary: 'Refactoring React Components', encryptedContent: 'EncryptedBlob...', tags: ['dev', 'react'] },
-  { id: '3', source: 'Gemini', type: 'conversation', date: '2023-11-02', summary: 'Recette Cuisine Italienne', encryptedContent: 'EncryptedBlob...', tags: ['perso', 'cooking'] },
-  { id: '4', source: 'Midjourney', type: 'image', date: '2023-11-05', summary: 'Cyberpunk Cityscapes', encryptedContent: 'EncryptedBlob...', tags: ['art', 'concept'] },
+  { id: '1', source: 'ChatGPT', type: 'conversation', date: '2023-10-15', summary: 'Brainstorming Marketing Eco-responsable', encryptedContent: 'EncryptedBlob_A1B2C3D4...', tags: ['work', 'marketing'] },
+  { id: '2', source: 'Claude', type: 'code', date: '2023-10-18', summary: 'Refactoring React Components', encryptedContent: 'EncryptedBlob_E5F6G7H8...', tags: ['dev', 'react'] },
+  { id: '3', source: 'Gemini', type: 'conversation', date: '2023-11-02', summary: 'Recette Cuisine Italienne', encryptedContent: 'EncryptedBlob_I9J0K1L2...', tags: ['perso', 'cooking'] },
+  { id: '4', source: 'Midjourney', type: 'image', date: '2023-11-05', summary: 'Cyberpunk Cityscapes', encryptedContent: 'EncryptedBlob_M3N4O5P6...', tags: ['art', 'concept'] },
+  { id: '5', source: 'ChatGPT', type: 'conversation', date: '2023-11-08', summary: 'Planification Voyage Japon', encryptedContent: 'EncryptedBlob_Q7R8S9T0...', tags: ['perso', 'travel'] },
+  { id: '6', source: 'Github Copilot', type: 'code', date: '2023-11-10', summary: 'Python Script Automation', encryptedContent: 'EncryptedBlob_U1V2W3X4...', tags: ['dev', 'python'] },
 ];
 
 const MOCK_CHART_DATA: ChartData[] = [
@@ -38,6 +47,103 @@ const MOCK_CHART_DATA: ChartData[] = [
   { subject: 'Linguistique', A: 85, fullMark: 150 },
   { subject: 'Technique', A: 65, fullMark: 150 },
 ];
+
+interface ProfileDimensionData {
+  label: string;
+  scores: {
+    ALL: number;
+    ChatGPT: number;
+    Claude: number;
+    Gemini: number;
+    [key: string]: number;
+  };
+  color: string;
+  icon: React.ReactNode;
+}
+
+const PROFILE_DIMENSIONS_DATA: ProfileDimensionData[] = [
+  { 
+    label: 'Professionnel', 
+    scores: { ALL: 85, ChatGPT: 60, Claude: 90, Gemini: 40 }, 
+    color: 'bg-blue-500', 
+    icon: <Briefcase className="w-4 h-4" /> 
+  },
+  { 
+    label: 'Personnel', 
+    scores: { ALL: 62, ChatGPT: 70, Claude: 30, Gemini: 65 }, 
+    color: 'bg-emerald-500', 
+    icon: <Heart className="w-4 h-4" /> 
+  },
+  { 
+    label: 'Psychologique', 
+    scores: { ALL: 45, ChatGPT: 55, Claude: 40, Gemini: 20 }, 
+    color: 'bg-purple-500', 
+    icon: <Activity className="w-4 h-4" /> 
+  },
+  { 
+    label: 'Sociologique', 
+    scores: { ALL: 30, ChatGPT: 35, Claude: 25, Gemini: 10 }, 
+    color: 'bg-yellow-500', 
+    icon: <Users className="w-4 h-4" /> 
+  },
+  { 
+    label: 'Économique', 
+    scores: { ALL: 78, ChatGPT: 50, Claude: 60, Gemini: 85 }, 
+    color: 'bg-cyan-500', 
+    icon: <TrendingUp className="w-4 h-4" /> 
+  },
+  { 
+    label: 'Politique', 
+    scores: { ALL: 15, ChatGPT: 20, Claude: 10, Gemini: 5 }, 
+    color: 'bg-red-500', 
+    icon: <Landmark className="w-4 h-4" /> 
+  },
+];
+
+interface DisplayDimension {
+  label: string;
+  score: number;
+  color: string;
+  icon: React.ReactNode;
+}
+
+const AnimatedProgressBar: React.FC<{ dimension: DisplayDimension, delay: number }> = ({ dimension, delay }) => {
+  const [width, setWidth] = useState(0);
+
+  useEffect(() => {
+    // Reset width to 0 briefly when dimension.score changes to re-trigger animation feel, 
+    // or just let CSS transition handle the slide.
+    // CSS transition is smoother for value updates.
+    const timer = setTimeout(() => {
+      setWidth(dimension.score);
+    }, delay); // Initial delay
+    
+    // Immediate update for prop changes after mount (handled by CSS transition mostly)
+    setWidth(dimension.score);
+
+    return () => clearTimeout(timer);
+  }, [dimension.score, delay]);
+
+  return (
+    <div className="mb-5">
+      <div className="flex justify-between items-center mb-2">
+        <div className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+          <span className={`p-1 rounded-md ${dimension.color} bg-opacity-20 text-inherit dark:text-white dark:bg-opacity-30`}>
+            {dimension.icon}
+          </span>
+          {dimension.label}
+        </div>
+        <span className="text-sm font-bold text-slate-900 dark:text-white">{dimension.score}%</span>
+      </div>
+      <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2.5 overflow-hidden">
+        <div 
+          className={`h-2.5 rounded-full ${dimension.color} transition-all duration-1000 ease-out`} 
+          style={{ width: `${width}%` }}
+        ></div>
+      </div>
+    </div>
+  );
+};
 
 const App = () => {
   const [view, setView] = useState<ViewState>(ViewState.LANDING);
@@ -50,6 +156,7 @@ const App = () => {
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [selectedDimensionProvider, setSelectedDimensionProvider] = useState<string>('ALL');
 
   useEffect(() => {
     // Check system preference on mount
@@ -93,7 +200,7 @@ const App = () => {
       type: 'conversation',
       date: new Date().toISOString().split('T')[0],
       summary: 'Nouvelles données importées (Analyse en attente)',
-      encryptedContent: '...',
+      encryptedContent: 'EncryptedBlob_NewImport...',
       tags: ['import']
     };
     setVaultItems([newItem, ...vaultItems]);
@@ -125,7 +232,8 @@ const App = () => {
       date: new Date().toISOString(),
       analysis: aiAnalysis || "Non analysé",
       stats: MOCK_CHART_DATA,
-      tags: Array.from(new Set(vaultItems.flatMap(i => i.tags)))
+      tags: Array.from(new Set(vaultItems.flatMap(i => i.tags))),
+      dimensions: PROFILE_DIMENSIONS_DATA
     };
     
     const blob = new Blob([JSON.stringify(profileData, null, 2)], { type: 'application/json' });
@@ -137,6 +245,42 @@ const App = () => {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  };
+
+  const downloadEncryptedItem = (item: VaultItem) => {
+    const dataToDownload = {
+      id: item.id,
+      source: item.source,
+      date: item.date,
+      type: item.type,
+      encryptedContent: item.encryptedContent,
+      summary: item.summary,
+      encryptionMethod: "AES-256 (Simulated)"
+    };
+    
+    const blob = new Blob([JSON.stringify(dataToDownload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `aiguardian_encrypted_${item.id}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const getChartData = () => {
+    const counts = vaultItems.reduce((acc, item) => {
+      const key = item.type;
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return [
+      { name: 'Conversations', count: counts['conversation'] || 0, color: '#3b82f6' }, // blue-500
+      { name: 'Code', count: counts['code'] || 0, color: '#10b981' }, // emerald-500
+      { name: 'Images', count: counts['image'] || 0, color: '#8b5cf6' }, // violet-500
+    ];
   };
 
   // --- Render Sections ---
@@ -359,7 +503,11 @@ const App = () => {
                         <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-sm capitalize">{item.type}</td>
                         <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-sm">{item.date}</td>
                         <td className="px-6 py-4">
-                          <button className="text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                          <button 
+                            onClick={() => downloadEncryptedItem(item)}
+                            className="text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                            title="Télécharger le contenu chiffré"
+                          >
                             <Download className="w-4 h-4" />
                           </button>
                         </td>
@@ -384,22 +532,29 @@ const App = () => {
                   <p className="text-slate-600 dark:text-slate-400 mb-6 text-sm">
                     Utilisez notre IA locale sécurisée pour analyser la structure de vos connaissances sans exposer les données brutes.
                   </p>
-                  {!aiAnalysis ? (
+                  
+                  {!aiAnalysis && !analyzing && (
                     <button 
                       onClick={runAnalysis} 
-                      disabled={analyzing}
-                      className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white rounded-lg font-medium transition-colors disabled:opacity-70 flex items-center justify-center gap-2"
+                      className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2 shadow-md shadow-indigo-500/20"
                     >
-                      {analyzing ? (
-                        <>
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                          <span>Analyse en cours...</span>
-                        </>
-                      ) : (
-                        'Générer mon profil de connaissances'
-                      )}
+                      Générer mon profil de connaissances
                     </button>
-                  ) : (
+                  )}
+
+                  {analyzing && (
+                    <div className="w-full py-6 px-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-lg flex flex-col items-center justify-center gap-3 animate-pulse transition-all">
+                      <Loader2 className="w-8 h-8 text-indigo-600 dark:text-indigo-400 animate-spin" />
+                      <div className="text-sm font-medium text-slate-600 dark:text-slate-300">Analyse de vos données sécurisées en cours...</div>
+                      <div className="flex gap-1 mt-1">
+                        <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                        <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                        <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                      </div>
+                    </div>
+                  )}
+
+                  {aiAnalysis && (
                     <div className="space-y-3">
                       <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-lg border border-indigo-100 dark:border-indigo-800 text-indigo-900 dark:text-indigo-200 text-sm leading-relaxed animate-in fade-in">
                         {aiAnalysis}
@@ -415,26 +570,91 @@ const App = () => {
                  </div>
 
                  <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm transition-colors">
+                    <div className="flex justify-between items-start mb-6">
+                      <h3 className="font-bold text-lg text-slate-900 dark:text-white">Dimensions du Profil</h3>
+                    </div>
+                    
+                    {/* Provider Filters */}
+                    <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
+                      {['ALL', 'ChatGPT', 'Claude', 'Gemini'].map((provider) => (
+                        <button
+                          key={provider}
+                          onClick={() => setSelectedDimensionProvider(provider)}
+                          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap ${
+                            selectedDimensionProvider === provider
+                              ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
+                              : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                          }`}
+                        >
+                          {provider === 'ALL' ? 'Global (Toutes IA)' : provider}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="space-y-1">
+                      {PROFILE_DIMENSIONS_DATA.map((dim, index) => {
+                        // Dynamically calculate score based on selection
+                        const displayScore = dim.scores[selectedDimensionProvider] || 0;
+                        const displayDim: DisplayDimension = {
+                          label: dim.label,
+                          color: dim.color,
+                          icon: dim.icon,
+                          score: displayScore
+                        };
+                        return (
+                          <AnimatedProgressBar 
+                            key={dim.label} 
+                            dimension={displayDim} 
+                            delay={index * 150} 
+                          />
+                        );
+                      })}
+                    </div>
+                 </div>
+              </div>
+
+              <div className="space-y-6">
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col items-center justify-center min-h-[400px] transition-colors">
+                   <h3 className="font-bold text-lg mb-6 text-slate-900 dark:text-white self-start">Distribution des Données</h3>
+                   <div className="w-full h-[300px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={getChartData()} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#475569" : "#e2e8f0"} vertical={false} />
+                          <XAxis 
+                            dataKey="name" 
+                            stroke={isDarkMode ? "#cbd5e1" : "#475569"} 
+                            tick={{ fill: isDarkMode ? "#cbd5e1" : "#475569" }}
+                          />
+                          <YAxis 
+                            stroke={isDarkMode ? "#cbd5e1" : "#475569"} 
+                            tick={{ fill: isDarkMode ? "#cbd5e1" : "#475569" }}
+                          />
+                          <Tooltip 
+                            contentStyle={{ 
+                              backgroundColor: isDarkMode ? '#1e293b' : '#fff', 
+                              borderColor: isDarkMode ? '#334155' : '#e2e8f0', 
+                              color: isDarkMode ? '#fff' : '#000',
+                              borderRadius: '8px'
+                            }}
+                            cursor={{ fill: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }}
+                          />
+                          <Bar dataKey="count" name="Éléments" radius={[4, 4, 0, 0]}>
+                             {getChartData().map((entry, index) => (
+                               <Cell key={`cell-${index}`} fill={entry.color} />
+                             ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                   </div>
+                </div>
+
+                 <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm transition-colors">
                     <h3 className="font-bold text-lg mb-4 text-slate-900 dark:text-white">Sujets Fréquents</h3>
                     <div className="flex flex-wrap gap-2">
                        {Array.from(new Set(vaultItems.flatMap(i => i.tags))).map(tag => (
                          <span key={tag} className="px-3 py-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-full text-sm">#{tag}</span>
                        ))}
                     </div>
-                 </div>
-              </div>
-
-              <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col items-center justify-center min-h-[400px] transition-colors">
-                 <h3 className="font-bold text-lg mb-6 text-slate-900 dark:text-white self-start">Visualisation Radar</h3>
-                 <div className="w-full h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <RadarChart cx="50%" cy="50%" outerRadius="80%" data={MOCK_CHART_DATA}>
-                        <PolarGrid stroke={isDarkMode ? "#475569" : "#e2e8f0"} />
-                        <PolarAngleAxis dataKey="subject" tick={{ fill: isDarkMode ? "#cbd5e1" : "#475569" }} />
-                        <PolarRadiusAxis tick={{ fill: isDarkMode ? "#94a3b8" : "#94a3b8" }} axisLine={false} />
-                        <Radar name="User" dataKey="A" stroke="#2563eb" fill="#3b82f6" fillOpacity={0.6} />
-                      </RadarChart>
-                    </ResponsiveContainer>
                  </div>
               </div>
             </div>
