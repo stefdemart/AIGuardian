@@ -22,7 +22,10 @@ import {
   Heart,
   TrendingUp,
   Cpu,
-  Filter
+  Filter,
+  Smartphone,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { ViewState, VaultItem, ChartData } from './types';
@@ -146,6 +149,129 @@ const AnimatedProgressBar: React.FC<{ dimension: DisplayDimension, delay: number
   );
 };
 
+// 2FA Modal Component
+interface TwoFactorModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+const TwoFactorModal: React.FC<TwoFactorModalProps> = ({ isOpen, onClose, onSuccess }) => {
+  const [code, setCode] = useState(['', '', '', '', '', '']);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setCode(['', '', '', '', '', '']);
+      setError(false);
+      setIsVerifying(false);
+    }
+  }, [isOpen]);
+
+  const handleChange = (index: number, value: string) => {
+    if (isNaN(Number(value))) return;
+    const newCode = [...code];
+    newCode[index] = value;
+    setCode(newCode);
+
+    // Auto-focus next input
+    if (value !== '' && index < 5) {
+      const nextInput = document.getElementById(`2fa-input-${index + 1}`);
+      nextInput?.focus();
+    }
+  };
+
+  const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
+    if (e.key === 'Backspace' && code[index] === '' && index > 0) {
+      const prevInput = document.getElementById(`2fa-input-${index - 1}`);
+      prevInput?.focus();
+    }
+  };
+
+  const verifyCode = () => {
+    setIsVerifying(true);
+    setError(false);
+    
+    // Simulate API verification
+    setTimeout(() => {
+      const enteredCode = code.join('');
+      // Mock correct code is 123456
+      if (enteredCode === '123456') {
+        setIsVerifying(false);
+        onSuccess();
+      } else {
+        setIsVerifying(false);
+        setError(true);
+      }
+    }, 1500);
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[60] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-sm w-full p-6 border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-200">
+        <div className="flex flex-col items-center text-center space-y-4">
+          <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mb-2">
+            <Smartphone className="w-8 h-8" />
+          </div>
+          
+          <h3 className="text-xl font-bold text-slate-900 dark:text-white">Authentification Forte</h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Pour sécuriser cette action, veuillez saisir le code envoyé à votre appareil de confiance (** ** ** 42).
+          </p>
+
+          <div className="flex gap-2 justify-center py-2">
+            {code.map((digit, idx) => (
+              <input
+                key={idx}
+                id={`2fa-input-${idx}`}
+                type="text"
+                maxLength={1}
+                value={digit}
+                onChange={(e) => handleChange(idx, e.target.value)}
+                onKeyDown={(e) => handleKeyDown(idx, e)}
+                className={`w-10 h-12 text-center text-xl font-bold rounded-lg border focus:ring-2 focus:outline-none transition-all ${
+                  error 
+                    ? 'border-red-300 bg-red-50 text-red-600 focus:ring-red-500 dark:bg-red-900/20 dark:border-red-800' 
+                    : 'border-slate-300 bg-slate-50 text-slate-900 focus:border-blue-500 focus:ring-blue-500 dark:bg-slate-800 dark:border-slate-700 dark:text-white'
+                }`}
+              />
+            ))}
+          </div>
+
+          {error && (
+             <div className="flex items-center gap-2 text-xs text-red-600 dark:text-red-400 font-medium bg-red-50 dark:bg-red-900/20 px-3 py-1.5 rounded-full">
+               <AlertCircle className="w-3 h-3" /> Code incorrect. Essayez 123456.
+             </div>
+          )}
+
+          <div className="w-full space-y-3 pt-2">
+            <button 
+              onClick={verifyCode}
+              disabled={isVerifying || code.some(c => c === '')}
+              className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-bold transition-colors flex items-center justify-center gap-2"
+            >
+              {isVerifying ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Vérifier'}
+            </button>
+            <button 
+              onClick={onClose}
+              className="w-full py-2 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white text-sm font-medium transition-colors"
+            >
+              Annuler
+            </button>
+          </div>
+          
+          <p className="text-xs text-slate-400 dark:text-slate-500 pt-2">
+            Code non reçu ? <button className="text-blue-600 dark:text-blue-400 hover:underline">Renvoyer</button>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const App = () => {
   const [view, setView] = useState<ViewState>(ViewState.LANDING);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -159,6 +285,10 @@ const App = () => {
   const [analyzing, setAnalyzing] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [selectedDimensionProvider, setSelectedDimensionProvider] = useState<string>('ALL');
+  
+  // 2FA States
+  const [is2FAOpen, setIs2FAOpen] = useState(false);
+  const [pending2FAAction, setPending2FAAction] = useState<(() => void) | null>(null);
 
   useEffect(() => {
     // Check system preference on mount
@@ -216,8 +346,22 @@ const App = () => {
     setVaultItems([newItem, ...vaultItems]);
   };
 
+  // Generic Secure Action Wrapper
+  const handleSecureAction = (action: () => void) => {
+    setPending2FAAction(() => action);
+    setIs2FAOpen(true);
+  };
+
+  const on2FASuccess = () => {
+    setIs2FAOpen(false);
+    if (pending2FAAction) {
+      pending2FAAction();
+      setPending2FAAction(null);
+    }
+  };
+
   const generateRio = () => {
-    // Generate a RIO-like key
+    // This function will be passed to handleSecureAction
     const parts = [
       'AIG',
       Math.floor(Math.random() * 90 + 10).toString(), // Provider Code
@@ -569,7 +713,7 @@ const App = () => {
                         <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-sm">{item.date}</td>
                         <td className="px-6 py-4">
                           <button 
-                            onClick={() => downloadEncryptedItem(item)}
+                            onClick={() => handleSecureAction(() => downloadEncryptedItem(item))}
                             className="text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                             title="Télécharger le contenu chiffré"
                           >
@@ -625,7 +769,7 @@ const App = () => {
                         {aiAnalysis}
                       </div>
                       <button 
-                        onClick={downloadProfile}
+                        onClick={() => handleSecureAction(downloadProfile)}
                         className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium transition-colors shadow-sm"
                       >
                         <Download className="w-4 h-4" /> Télécharger le Profil
@@ -744,7 +888,10 @@ const App = () => {
                 <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded text-xs text-yellow-800 dark:text-yellow-200 text-left">
                   <strong>Attention:</strong> Cette action génère une clé de déchiffrement temporaire. Ne la partagez qu'avec le nouveau service de confiance.
                 </div>
-                <button onClick={generateRio} className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors">
+                <button 
+                  onClick={() => handleSecureAction(generateRio)} 
+                  className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors"
+                >
                   Générer le code RIO
                 </button>
               </div>
@@ -772,6 +919,14 @@ const App = () => {
           onCancel={() => setShowImport(false)} 
         />
       )}
+
+      {/* 2FA Modal */}
+      <TwoFactorModal 
+        isOpen={is2FAOpen} 
+        onClose={() => setIs2FAOpen(false)} 
+        onSuccess={on2FASuccess}
+      />
+
     </div>
   );
 
