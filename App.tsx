@@ -14,7 +14,7 @@ import {
   FileText,
   Moon,
   Sun,
-  Loader2,
+  Loader2, 
   Activity,
   Briefcase,
   Users,
@@ -42,10 +42,19 @@ import {
   Sparkles,
   Lock,
   Server,
-  Network
+  Network,
+  Eye,
+  Globe,
+  Scan,
+  Fingerprint,
+  MapPin,
+  AlertOctagon,
+  Terminal,
+  Ghost,
+  Copy
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { ViewState, VaultItem, ChartData, AnalysisHistoryItem } from './types';
+import { ViewState, VaultItem, ChartData, AnalysisHistoryItem, RiskLevel, Risk } from './types';
 import { CookieBanner } from './components/CookieBanner';
 import { ImportWizard } from './components/ImportWizard';
 import { analyzeVaultData } from './services/geminiService';
@@ -54,10 +63,10 @@ import { analyzeVaultData } from './services/geminiService';
 
 const MOCK_VAULT_ITEMS: VaultItem[] = [
   { id: '1', source: 'ChatGPT', type: 'conversation', date: '2023-10-15', summary: 'Brainstorming Marketing Eco-responsable', encryptedContent: 'EncryptedBlob_A1B2C3D4...', tags: ['work', 'marketing'] },
-  { id: '2', source: 'Claude', type: 'code', date: '2023-10-18', summary: 'Refactoring React Components', encryptedContent: 'EncryptedBlob_E5F6G7H8...', tags: ['dev', 'react'] },
+  { id: '2', source: 'Claude', type: 'code', date: '2023-10-18', summary: 'Refactoring React Components', encryptedContent: 'EncryptedBlob_E5F6G7H8...', tags: ['dev', 'react'], riskLevel: 'HIGH', risks: [{id: 'r1', type: 'SECRET', description: 'Clé API AWS détectée', snippet: 'AWS_ACCESS_KEY_ID=AKIA...'}] },
   { id: '3', source: 'Gemini', type: 'conversation', date: '2023-11-02', summary: 'Recette Cuisine Italienne', encryptedContent: 'EncryptedBlob_I9J0K1L2...', tags: ['perso', 'cooking'] },
   { id: '4', source: 'Midjourney', type: 'image', date: '2023-11-05', summary: 'Cyberpunk Cityscapes', encryptedContent: 'EncryptedBlob_M3N4O5P6...', tags: ['art', 'concept'] },
-  { id: '5', source: 'ChatGPT', type: 'conversation', date: '2023-11-08', summary: 'Planification Voyage Japon', encryptedContent: 'EncryptedBlob_Q7R8S9T0...', tags: ['perso', 'travel'] },
+  { id: '5', source: 'ChatGPT', type: 'conversation', date: '2023-11-08', summary: 'Planification Voyage Japon', encryptedContent: 'EncryptedBlob_Q7R8S9T0...', tags: ['perso', 'travel'], riskLevel: 'MEDIUM', risks: [{id: 'r2', type: 'PII', description: 'Numéro de passeport', snippet: 'Passeport: 18AV5...'}] },
   { id: '6', source: 'Github Copilot', type: 'code', date: '2023-11-10', summary: 'Python Script Automation', encryptedContent: 'EncryptedBlob_U1V2W3X4...', tags: ['dev', 'python'] },
 ];
 
@@ -368,6 +377,14 @@ const App = () => {
   const [itemToDelete, setItemToDelete] = useState<VaultItem | null>(null);
   const [isInfoOpen, setIsInfoOpen] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isAuditMode, setIsAuditMode] = useState(false);
+  const [selectedRiskItem, setSelectedRiskItem] = useState<VaultItem | null>(null);
+
+  // OSINT State
+  const [osintSearchTerm, setOsintSearchTerm] = useState('');
+  const [isScanningOsint, setIsScanningOsint] = useState(false);
+  const [osintLogs, setOsintLogs] = useState<string[]>([]);
+  const [osintResults, setOsintResults] = useState<any | null>(null);
 
   const [enabledSources, setEnabledSources] = useState<Record<string, boolean>>({
     'ChatGPT': true, 'Claude': true, 'Gemini': true
@@ -437,8 +454,13 @@ const App = () => {
   };
 
   const generateDls = () => {
-    const parts = ['DLS', Math.floor(Math.random() * 90 + 10).toString(), 'X', Math.random().toString(36).substr(2, 6).toUpperCase(), Math.random().toString(36).substr(2, 3).toUpperCase()];
-    setGeneratedDls(parts.join('-'));
+    const parts = ['DLS', Math.floor(Math.random() * 90 + 10).toString(), 'X', Math.random().toString(36).substr(2, 6).toUpperCase(), Math.random().toString(36).substr(2, 3).toUpperCase(), 'SK', Math.random().toString(36).substr(2, 12).toUpperCase(), Math.random().toString(36).substr(2, 12).toUpperCase(), 'V2'];
+    setGeneratedDls('dls_sk_live_' + parts.join('').toLowerCase());
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    // You could add a toast here
   };
 
   const runAnalysis = async () => {
@@ -491,6 +513,52 @@ const App = () => {
 
   const rotateKeys = () => {
     alert("Rotation des clés de chiffrement effectuée avec succès. Vos données ont été ré-encapsulées.");
+  };
+
+  // --- OSINT Functionality ---
+  const runOsintScan = () => {
+    if(!osintSearchTerm) return;
+    setIsScanningOsint(true);
+    setOsintResults(null);
+    setOsintLogs([]);
+    
+    const logs = [
+      "Initializing deep web crawler...",
+      `Targeting identity: ${osintSearchTerm}`,
+      "Querying breach databases (HaveIBeenPwned API)...",
+      "Scanning social graph nodes...",
+      "Analyzing public metadata...",
+      "Warning: 3 potential leaks found in darknet dumps.",
+      "Triangulating digital footprint...",
+      "Compiling report..."
+    ];
+
+    let delay = 0;
+    logs.forEach((log, index) => {
+      delay += Math.random() * 800 + 400;
+      setTimeout(() => {
+        setOsintLogs(prev => [...prev, log]);
+        if(index === logs.length - 1) {
+          setIsScanningOsint(false);
+          setOsintResults({
+             exposureScore: "CRITIQUE",
+             breaches: [
+               { source: "LinkedIn", date: "2021", data: "Email, Profession, Connections" },
+               { source: "Adobe", date: "2013", data: "Email, Password Hint, Username" },
+               { source: "Canva", date: "2019", data: "Email, Name, City" }
+             ],
+             socials: [
+               { platform: "Twitter", username: "@target_user", risk: "Public Geo-tagging" },
+               { platform: "Instagram", username: "unknown", risk: "Face Recognition Match" }
+             ],
+             metadata: {
+               ips: ["45.32.12.xx", "192.168.1.xx"],
+               devices: ["iPhone 13", "MacBook Pro (2021)"]
+             }
+          });
+        }
+      }, delay);
+    });
   };
 
   const getChartData = () => {
@@ -720,6 +788,7 @@ const App = () => {
         {[
           { id: ViewState.DASHBOARD, icon: Database, label: 'Mon Coffre-fort' },
           { id: ViewState.PROFILE, icon: BrainCircuit, label: 'Profil de Connaissances' },
+          { id: ViewState.OSINT, icon: Eye, label: 'OSINT / Digital Footprint' },
           { id: ViewState.DLS, icon: Share2, label: 'Portabilité (DLS)' },
           { id: ViewState.SETTINGS, icon: Settings, label: 'Paramètres' },
         ].map(item => (
@@ -771,16 +840,27 @@ const App = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide w-full md:w-auto p-1 bg-slate-100/50 dark:bg-slate-900/50 backdrop-blur-md rounded-2xl border border-slate-200 dark:border-white/5">
-          {uniqueSources.map(source => (
-            <button
-              key={source}
-              onClick={() => setSelectedSourceFilter(source)}
-              className={`px-4 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all duration-200 ${selectedSourceFilter === source ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-md transform scale-105 border border-slate-100 dark:border-white/10' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
-            >
-              {source === 'ALL' ? 'Tout' : source}
-            </button>
-          ))}
+        <div className="flex gap-4 items-center w-full md:w-auto">
+             <div className="flex items-center gap-2 mr-4">
+                 <span className={`text-xs font-bold ${isAuditMode ? 'text-rose-500' : 'text-slate-500'}`}>SCAN AUDIT</span>
+                 <button 
+                  onClick={() => setIsAuditMode(!isAuditMode)}
+                  className={`relative w-11 h-6 rounded-full transition-colors ${isAuditMode ? 'bg-rose-500' : 'bg-slate-200 dark:bg-slate-700'}`}
+                 >
+                    <span className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform ${isAuditMode ? 'translate-x-5' : 'translate-x-0'}`}></span>
+                 </button>
+             </div>
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide p-1 bg-slate-100/50 dark:bg-slate-900/50 backdrop-blur-md rounded-2xl border border-slate-200 dark:border-white/5">
+            {uniqueSources.map(source => (
+                <button
+                key={source}
+                onClick={() => setSelectedSourceFilter(source)}
+                className={`px-4 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all duration-200 ${selectedSourceFilter === source ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-md transform scale-105 border border-slate-100 dark:border-white/10' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
+                >
+                {source === 'ALL' ? 'Tout' : source}
+                </button>
+            ))}
+            </div>
         </div>
       </div>
 
@@ -790,14 +870,14 @@ const App = () => {
             <tr>
               <th className="px-6 py-4 font-semibold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider font-mono">Source</th>
               <th className="px-6 py-4 font-semibold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider font-mono">Contenu</th>
-              <th className="px-6 py-4 font-semibold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider font-mono">Type</th>
+              <th className="px-6 py-4 font-semibold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider font-mono">{isAuditMode ? 'SCORE DE RISQUE' : 'TYPE'}</th>
               <th className="px-6 py-4 font-semibold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider font-mono">Date</th>
               <th className="px-6 py-4 font-semibold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider text-right font-mono">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-white/5">
             {filteredItems.map(item => (
-              <tr key={item.id} className="hover:bg-cyan-50/50 dark:hover:bg-white/5 transition-colors group">
+              <tr key={item.id} className={`transition-colors group ${isAuditMode ? (item.riskLevel ? 'bg-rose-50/50 dark:bg-rose-900/10 hover:bg-rose-100 dark:hover:bg-rose-900/20' : 'opacity-40') : 'hover:bg-cyan-50/50 dark:hover:bg-white/5'}`}>
                 <td className="px-6 py-4">
                   <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${
                       item.source === 'ChatGPT' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20' : 
@@ -813,12 +893,24 @@ const App = () => {
                         {item.tags.map(tag => <span key={tag} className="text-[10px] text-slate-400 font-mono">#{tag}</span>)}
                     </div>
                 </td>
-                <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-sm capitalize">{item.type}</td>
+                <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-sm capitalize">
+                    {isAuditMode && item.riskLevel ? (
+                        <div className="flex items-center gap-2 text-rose-500 font-bold font-mono animate-pulse">
+                            <AlertTriangle className="w-4 h-4" /> {item.riskLevel}
+                        </div>
+                    ) : item.type}
+                </td>
                 <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-sm font-mono">{item.date}</td>
                 <td className="px-6 py-4">
                   <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => handleSecureAction(() => downloadEncryptedItem(item))} className="p-2 text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 dark:hover:bg-cyan-900/20 rounded-lg transition-colors" title="Télécharger"><Download className="w-4 h-4" /></button>
-                    <button onClick={() => handleDeleteClick(item)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors" title="Supprimer"><Trash2 className="w-4 h-4" /></button>
+                    {isAuditMode && item.riskLevel ? (
+                        <button onClick={() => setSelectedRiskItem(item)} className="px-3 py-1.5 bg-rose-500 text-white rounded-lg text-xs font-bold shadow-lg shadow-rose-500/30 hover:bg-rose-600 transition-all">CORRIGER</button>
+                    ) : (
+                        <>
+                        <button onClick={() => handleSecureAction(() => downloadEncryptedItem(item))} className="p-2 text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 dark:hover:bg-cyan-900/20 rounded-lg transition-colors" title="Télécharger"><Download className="w-4 h-4" /></button>
+                        <button onClick={() => handleDeleteClick(item)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors" title="Supprimer"><Trash2 className="w-4 h-4" /></button>
+                        </>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -826,6 +918,145 @@ const App = () => {
           </tbody>
         </table>
       </div>
+    </div>
+  );
+
+  const renderOsint = () => (
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <SpotlightCard className="p-8 border-cyan-500/30">
+        <div className="flex flex-col md:flex-row gap-8">
+           <div className="flex-1 space-y-6">
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white font-mono flex items-center gap-3">
+                 <div className="p-2 bg-cyan-100 dark:bg-cyan-500/20 rounded-lg animate-pulse">
+                    <Scan className="w-6 h-6 text-cyan-600 dark:text-cyan-400" />
+                 </div>
+                 DIGITAL FOOTPRINT ANALYZER
+              </h2>
+              <p className="text-slate-500 dark:text-slate-400">
+                Scannez votre empreinte numérique publique (OSINT). Identifiez les fuites de données, les profils sociaux exposés et les métadonnées accessibles publiquement.
+              </p>
+              
+              <div className="flex gap-4">
+                 <div className="relative flex-1">
+                    <Search className="absolute left-4 top-3.5 w-5 h-5 text-slate-400" />
+                    <input 
+                      type="text" 
+                      placeholder="Email, Username, ou Domaine..." 
+                      className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:outline-none text-slate-900 dark:text-white font-mono"
+                      value={osintSearchTerm}
+                      onChange={(e) => setOsintSearchTerm(e.target.value)}
+                    />
+                 </div>
+                 <button 
+                  onClick={runOsintScan} 
+                  disabled={isScanningOsint || !osintSearchTerm}
+                  className="px-6 py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold font-mono flex items-center gap-2 shadow-lg shadow-rose-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                 >
+                    {isScanningOsint ? <Loader2 className="w-5 h-5 animate-spin" /> : <Globe className="w-5 h-5" />}
+                    INITIATE_SCAN
+                 </button>
+              </div>
+           </div>
+           
+           <div className="w-full md:w-1/3 bg-black rounded-xl p-4 font-mono text-xs text-green-500 h-48 overflow-y-auto border border-green-500/20 shadow-[inset_0_0_20px_rgba(0,0,0,0.5)]">
+              <div className="flex items-center gap-2 border-b border-green-500/20 pb-2 mb-2">
+                 <Terminal className="w-4 h-4" /> SYSTEM_LOGS
+              </div>
+              {osintLogs.length === 0 && <span className="opacity-50 text-green-500/50">Waiting for target input...</span>}
+              {osintLogs.map((log, i) => (
+                 <div key={i} className="mb-1">{`> ${log}`}</div>
+              ))}
+              {isScanningOsint && <span className="animate-pulse">_</span>}
+           </div>
+        </div>
+      </SpotlightCard>
+
+      {osintResults && (
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-8">
+           {/* Exposure Score */}
+           <SpotlightCard className="p-6 border-l-4 border-l-rose-500">
+              <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                 <AlertOctagon className="w-4 h-4" /> Exposition Globale
+              </h3>
+              <div className="flex items-center gap-4">
+                 <div className="text-4xl font-black text-rose-500 tracking-tighter">CRITIQUE</div>
+                 <div className="px-2 py-1 bg-rose-500/10 text-rose-500 text-xs font-bold rounded">SCORE: 9.2/10</div>
+              </div>
+              <p className="mt-4 text-sm text-slate-600 dark:text-slate-300">
+                 Votre identité numérique présente de multiples vulnérabilités critiques. Action immédiate requise.
+              </p>
+           </SpotlightCard>
+
+           {/* Breaches */}
+           <SpotlightCard className="p-6 lg:col-span-2">
+              <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                 <Database className="w-4 h-4" /> Fuites de Données (Breaches)
+              </h3>
+              <div className="space-y-3">
+                 {osintResults.breaches.map((breach: any, i: number) => (
+                    <div key={i} className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-500/20 rounded-lg">
+                       <div className="flex items-center gap-3">
+                          <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+                          <div>
+                             <div className="font-bold text-slate-900 dark:text-white">{breach.source}</div>
+                             <div className="text-xs text-slate-500">Année: {breach.date}</div>
+                          </div>
+                       </div>
+                       <div className="text-right">
+                          <div className="text-xs font-mono text-red-600 dark:text-red-400">{breach.data}</div>
+                          <button className="text-xs underline text-slate-500 hover:text-slate-800 dark:hover:text-white mt-1">Changer mot de passe</button>
+                       </div>
+                    </div>
+                 ))}
+              </div>
+           </SpotlightCard>
+
+           {/* Socials */}
+           <SpotlightCard className="p-6">
+              <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                 <Users className="w-4 h-4" /> Traces Sociales
+              </h3>
+              <div className="space-y-3">
+                 {osintResults.socials.map((social: any, i: number) => (
+                    <div key={i} className="p-3 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-100 dark:border-white/5">
+                       <div className="flex justify-between items-center mb-1">
+                          <span className="font-bold text-slate-800 dark:text-white">{social.platform}</span>
+                          <span className="text-xs font-mono text-slate-500">{social.username}</span>
+                       </div>
+                       <div className="text-xs text-orange-500 flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" /> {social.risk}
+                       </div>
+                    </div>
+                 ))}
+              </div>
+           </SpotlightCard>
+
+           {/* Technical Metadata */}
+           <SpotlightCard className="p-6 lg:col-span-2">
+              <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                 <Fingerprint className="w-4 h-4" /> Métadonnées Techniques
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
+                 <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-white/5">
+                    <div className="text-xs text-slate-400 mb-2 flex items-center gap-2"><MapPin className="w-3 h-3" /> Adresses IP Exposées</div>
+                    {osintResults.metadata.ips.map((ip: string, i: number) => (
+                       <div key={i} className="font-mono text-cyan-600 dark:text-cyan-400 text-sm">{ip}</div>
+                    ))}
+                 </div>
+                 <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-white/5">
+                    <div className="text-xs text-slate-400 mb-2 flex items-center gap-2"><Smartphone className="w-3 h-3" /> Appareils Détectés</div>
+                    {osintResults.metadata.devices.map((dev: string, i: number) => (
+                       <div key={i} className="font-mono text-slate-700 dark:text-slate-300 text-sm">{dev}</div>
+                    ))}
+                 </div>
+              </div>
+              <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-500/20 rounded-lg flex gap-3 text-xs text-blue-700 dark:text-blue-300">
+                 <Info className="w-4 h-4 shrink-0" />
+                 Note: Ce scan OSINT n'accède qu'aux données publiques. AIGuardian n'a pas hacké ces services, mais a agrégé les informations disponibles en source ouverte.
+              </div>
+           </SpotlightCard>
+        </div>
+      )}
     </div>
   );
 
@@ -1061,6 +1292,7 @@ const App = () => {
   const mainContent = () => {
     switch(view) {
       case ViewState.PROFILE: return renderProfile();
+      case ViewState.OSINT: return renderOsint();
       case ViewState.DLS: return (
         <div className="flex flex-col items-center justify-center h-[60vh] animate-in fade-in zoom-in duration-500">
             <SpotlightCard className="p-12 text-center max-w-md mx-auto shadow-[0_0_50px_rgba(6,182,212,0.15)] border-cyan-500/30">
@@ -1126,7 +1358,10 @@ const App = () => {
           <header className="sticky top-0 z-30 hidden lg:block bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-slate-200/60 dark:border-white/5 transition-all">
             <div className="px-8 py-5 flex justify-between items-center">
               <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight font-mono">
-                {view === ViewState.DASHBOARD ? '// MON_COFFRE_FORT' : view === ViewState.PROFILE ? '// PROFIL_COGNITIF' : view === ViewState.SETTINGS ? '// PARAMETRES_SYSTEME' : '// PROTOCOLE_DLS'}
+                {view === ViewState.DASHBOARD ? '// MON_COFFRE_FORT' : 
+                 view === ViewState.PROFILE ? '// PROFIL_COGNITIF' : 
+                 view === ViewState.SETTINGS ? '// PARAMETRES_SYSTEME' : 
+                 view === ViewState.OSINT ? '// OSINT_SCANNER' : '// PROTOCOLE_DLS'}
               </h1>
               <div className="flex items-center gap-4">
                 <button onClick={toggleTheme} className="p-2.5 rounded-full hover:bg-white dark:hover:bg-white/5 text-slate-600 dark:text-slate-400 transition-all border border-transparent hover:border-slate-200 dark:hover:border-white/5">
@@ -1145,7 +1380,7 @@ const App = () => {
           {mainContent()}
         </main>
 
-        {(view === ViewState.DASHBOARD || view === ViewState.PROFILE || view === ViewState.SETTINGS || view === ViewState.DLS) && (
+        {(view === ViewState.DASHBOARD || view === ViewState.PROFILE || view === ViewState.SETTINGS || view === ViewState.DLS || view === ViewState.OSINT) && (
            <footer className="p-8 border-t border-slate-200/60 dark:border-white/5 text-center text-xs text-slate-400">
              <div className="flex justify-center gap-6 mb-4">
                 <button onClick={() => setView(ViewState.PRIVACY)} className="hover:text-cyan-500 dark:hover:text-cyan-400 transition-colors">Confidentialité</button>
@@ -1171,8 +1406,15 @@ const App = () => {
                </div>
             ) : (
                <div className="text-center space-y-6 animate-in zoom-in-95">
-                  <div className="p-6 bg-slate-100 dark:bg-black/40 rounded-xl border border-slate-200 dark:border-cyan-500/30 font-mono text-2xl font-bold tracking-widest select-all text-slate-800 dark:text-cyan-400 shadow-[inset_0_2px_10px_rgba(0,0,0,0.3)]">
+                  <div className="relative p-6 bg-slate-100 dark:bg-black/40 rounded-xl border border-slate-200 dark:border-cyan-500/30 font-mono text-xl md:text-2xl font-bold tracking-widest break-all text-slate-800 dark:text-cyan-400 shadow-[inset_0_2px_10px_rgba(0,0,0,0.3)]">
                     {generatedDls}
+                    <button 
+                      onClick={() => copyToClipboard(generatedDls)}
+                      className="absolute top-2 right-2 p-2 hover:text-cyan-200 transition-colors"
+                      title="Copier"
+                    >
+                       <Copy className="w-4 h-4" />
+                    </button>
                   </div>
                   <p className="text-xs text-amber-600 dark:text-amber-400 font-medium flex items-center justify-center gap-2">
                     <AlertTriangle className="w-4 h-4" /> Ne partagez ce code qu'avec le destinataire de confiance.
@@ -1204,6 +1446,52 @@ const App = () => {
               </div>
             </div>
           </SpotlightCard>
+        </div>
+      )}
+
+      {/* Remediation Modal (Audit Mode) */}
+      {selectedRiskItem && selectedRiskItem.riskLevel && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-md flex items-center justify-center p-4">
+           <SpotlightCard className="max-w-lg w-full p-0 !bg-white dark:!bg-slate-900 border-rose-500/30 overflow-hidden">
+              <div className="p-6 border-b border-slate-200 dark:border-white/10 bg-rose-50 dark:bg-rose-900/10 flex justify-between items-center">
+                 <h3 className="font-bold text-rose-600 dark:text-rose-400 flex items-center gap-2">
+                    <AlertOctagon className="w-5 h-5" /> PROTOCOLE DE NETTOYAGE
+                 </h3>
+                 <button onClick={() => setSelectedRiskItem(null)} className="text-slate-400 hover:text-slate-900 dark:hover:text-white"><X className="w-5 h-5" /></button>
+              </div>
+              <div className="p-6 space-y-6">
+                 <div>
+                    <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Donnée Sensible Détectée</label>
+                    <div className="mt-2 p-3 bg-slate-100 dark:bg-black/40 rounded-lg font-mono text-sm text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/5">
+                       {selectedRiskItem.risks?.[0].description}
+                       <div className="mt-1 text-rose-500 dark:text-rose-400 opacity-80 blur-[2px] hover:blur-none transition-all cursor-help select-none">
+                          {selectedRiskItem.risks?.[0].snippet}
+                       </div>
+                    </div>
+                 </div>
+
+                 <div className="space-y-3">
+                    <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Actions Recommandées</label>
+                    <button className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-200 dark:border-white/10 hover:border-cyan-500 dark:hover:border-cyan-500 transition-all group">
+                       <span className="text-sm font-medium text-slate-700 dark:text-slate-200">1. Anonymiser localement (Scrubbing)</span>
+                       <Ghost className="w-4 h-4 text-slate-400 group-hover:text-cyan-500" />
+                    </button>
+                    <button className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-200 dark:border-white/10 hover:border-cyan-500 dark:hover:border-cyan-500 transition-all group">
+                       <span className="text-sm font-medium text-slate-700 dark:text-slate-200">2. Supprimer à la source ({selectedRiskItem.source})</span>
+                       <ExternalLink className="w-4 h-4 text-slate-400 group-hover:text-cyan-500" />
+                    </button>
+                 </div>
+              </div>
+              <div className="p-6 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-200 dark:border-white/5 flex justify-end gap-3">
+                 <button onClick={() => setSelectedRiskItem(null)} className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium text-sm">Ignorer</button>
+                 <button onClick={() => { 
+                    alert("Donnée anonymisée avec succès."); 
+                    setSelectedRiskItem(null); 
+                 }} className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold text-sm shadow-lg shadow-rose-500/20">
+                    Exécuter
+                 </button>
+              </div>
+           </SpotlightCard>
         </div>
       )}
 
