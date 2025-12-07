@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Shield, 
   Database, 
@@ -39,7 +38,11 @@ import {
   ChevronUp,
   Lightbulb,
   ExternalLink,
-  ArrowUpRight
+  ArrowUpRight,
+  Sparkles,
+  Lock,
+  Server,
+  Network
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { ViewState, VaultItem, ChartData, AnalysisHistoryItem } from './types';
@@ -81,7 +84,7 @@ const PROFILE_DIMENSIONS_DATA: ProfileDimensionData[] = [
   { 
     label: 'Professionnel', 
     scores: { ALL: 85, ChatGPT: 60, Claude: 90, Gemini: 40 }, 
-    color: 'bg-blue-500', 
+    color: 'bg-cyan-500', 
     icon: <Briefcase className="w-4 h-4" />,
     history: [60, 65, 70, 75, 80, 85]
   },
@@ -95,7 +98,7 @@ const PROFILE_DIMENSIONS_DATA: ProfileDimensionData[] = [
   { 
     label: 'Psychologique', 
     scores: { ALL: 45, ChatGPT: 55, Claude: 40, Gemini: 20 }, 
-    color: 'bg-purple-500', 
+    color: 'bg-fuchsia-500', 
     icon: <Activity className="w-4 h-4" />,
     history: [40, 42, 41, 43, 44, 45]
   },
@@ -109,14 +112,14 @@ const PROFILE_DIMENSIONS_DATA: ProfileDimensionData[] = [
   { 
     label: 'Économique', 
     scores: { ALL: 78, ChatGPT: 50, Claude: 60, Gemini: 85 }, 
-    color: 'bg-cyan-500', 
+    color: 'bg-blue-500', 
     icon: <TrendingUp className="w-4 h-4" />,
     history: [70, 72, 75, 74, 76, 78]
   },
   { 
     label: 'Politique', 
     scores: { ALL: 15, ChatGPT: 20, Claude: 10, Gemini: 5 }, 
-    color: 'bg-red-500', 
+    color: 'bg-rose-500', 
     icon: <Landmark className="w-4 h-4" />,
     history: [10, 12, 11, 13, 14, 15]
   },
@@ -124,26 +127,73 @@ const PROFILE_DIMENSIONS_DATA: ProfileDimensionData[] = [
 
 // --- Sub-Components ---
 
+// Spotlight Card Component (Cyber Style)
+const SpotlightCard: React.FC<{ children: React.ReactNode, className?: string, onClick?: () => void }> = ({ children, className = "", onClick }) => {
+  const divRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [opacity, setOpacity] = useState(0);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!divRef.current) return;
+    const rect = divRef.current.getBoundingClientRect();
+    setPosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+  };
+
+  const handleMouseEnter = () => setOpacity(1);
+  const handleMouseLeave = () => setOpacity(0);
+
+  return (
+    <div
+      ref={divRef}
+      onMouseMove={handleMouseMove}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      onClick={onClick}
+      className={`relative overflow-hidden rounded-xl border border-slate-200 dark:border-cyan-500/20 bg-white dark:bg-slate-950/60 backdrop-blur-md shadow-sm transition-all duration-300 ${className}`}
+    >
+      <div
+        className="pointer-events-none absolute -inset-px opacity-0 transition duration-300 z-10"
+        style={{
+          opacity,
+          background: `radial-gradient(600px circle at ${position.x}px ${position.y}px, rgba(6, 182, 212, 0.15), transparent 40%)`,
+        }}
+      />
+      <div className="relative h-full z-20">{children}</div>
+    </div>
+  );
+};
+
+// Animated Background Component (Cyber)
+const BackgroundBeams = () => {
+  return (
+    <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-slate-50 dark:bg-slate-950 transition-colors duration-500">
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-[120px] animate-pulse-slow"></div>
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-fuchsia-500/10 rounded-full blur-[120px] animate-pulse-slow" style={{ animationDelay: '2s' }}></div>
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-blue-500/5 rounded-full blur-[150px]"></div>
+      <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150 mix-blend-overlay"></div>
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(18,18,18,0)_1px,transparent_1px),linear-gradient(90deg,rgba(18,18,18,0)_1px,transparent_1px)] dark:bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_70%,transparent_100%)]"></div>
+    </div>
+  );
+};
+
 const Sparkline: React.FC<{ data: number[], colorClass: string }> = ({ data, colorClass }) => {
   const min = Math.min(...data);
   const max = Math.max(...data);
   const range = max - min || 1;
   
-  // Create SVG path
   const points = data.map((val, i) => {
-    const x = (i / (data.length - 1)) * 60; // width 60px
-    const y = 20 - ((val - min) / range) * 20; // height 20px
+    const x = (i / (data.length - 1)) * 60;
+    const y = 20 - ((val - min) / range) * 20;
     return `${x},${y}`;
   }).join(' ');
 
-  // Extract color hex from tailwind class map (simplified for demo)
   const colorMap: Record<string, string> = {
     'bg-blue-500': '#3b82f6',
     'bg-emerald-500': '#10b981',
-    'bg-purple-500': '#a855f7',
+    'bg-fuchsia-500': '#d946ef',
     'bg-yellow-500': '#eab308',
     'bg-cyan-500': '#06b6d4',
-    'bg-red-500': '#ef4444',
+    'bg-rose-500': '#f43f5e',
   };
   const strokeColor = colorMap[colorClass] || '#64748b';
 
@@ -157,7 +207,6 @@ const Sparkline: React.FC<{ data: number[], colorClass: string }> = ({ data, col
         strokeLinecap="round" 
         strokeLinejoin="round" 
       />
-      {/* End dot */}
       <circle cx="60" cy={20 - ((data[data.length-1] - min) / range) * 20} r="2" fill={strokeColor} />
     </svg>
   );
@@ -186,21 +235,21 @@ const AnimatedProgressBar: React.FC<{ dimension: DisplayDimension, delay: number
     <div className="mb-5 group">
       <div className="flex justify-between items-center mb-2">
         <div className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
-          <span className={`p-1 rounded-md ${dimension.color} bg-opacity-20 text-inherit dark:text-white dark:bg-opacity-30`}>
+          <span className={`p-1.5 rounded-lg ${dimension.color} bg-opacity-10 text-inherit dark:text-white dark:bg-opacity-20 backdrop-blur-sm`}>
             {dimension.icon}
           </span>
           {dimension.label}
         </div>
         <div className="flex items-center gap-3">
-            <div className="opacity-0 group-hover:opacity-100 transition-opacity" title="Évolution sur 6 mois">
+            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-500" title="Évolution sur 6 mois">
                 <Sparkline data={dimension.history} colorClass={dimension.color} />
             </div>
-            <span className="text-sm font-bold text-slate-900 dark:text-white w-8 text-right">{dimension.score}%</span>
+            <span className="text-sm font-bold text-slate-900 dark:text-white w-8 text-right font-mono">{dimension.score}%</span>
         </div>
       </div>
-      <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2.5 overflow-hidden">
+      <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
         <div 
-          className={`h-2.5 rounded-full ${dimension.color} transition-all duration-1000 ease-out`} 
+          className={`h-1.5 rounded-full ${dimension.color} shadow-[0_0_10px_rgba(var(--color-rgb),0.5)] transition-all duration-1000 ease-out`} 
           style={{ width: `${width}%` }}
         ></div>
       </div>
@@ -257,16 +306,18 @@ const TwoFactorModal: React.FC<TwoFactorModalProps> = ({ isOpen, onClose, onSucc
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-sm w-full p-6 border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-200">
-        <div className="flex flex-col items-center text-center space-y-4">
-          <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mb-2">
+    <div className="fixed inset-0 z-[60] bg-slate-950/60 backdrop-blur-md flex items-center justify-center p-4">
+      <SpotlightCard className="max-w-sm w-full p-8 border-slate-200 dark:border-cyan-500/30 !bg-white/90 dark:!bg-slate-950/90 shadow-[0_0_30px_rgba(6,182,212,0.1)]">
+        <div className="flex flex-col items-center text-center space-y-6">
+          <div className="w-16 h-16 bg-cyan-100 dark:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 rounded-full flex items-center justify-center mb-2 animate-pulse-slow">
             <Smartphone className="w-8 h-8" />
           </div>
-          <h3 className="text-xl font-bold text-slate-900 dark:text-white">Authentification Forte</h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            Veuillez saisir le code de sécurité envoyé à votre appareil (** ** ** 42).
-          </p>
+          <div>
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white font-mono">2FA Secure Check</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+              Saisissez le code temporaire (** ** ** 42).
+            </p>
+          </div>
           <div className="flex gap-2 justify-center py-2">
             {code.map((digit, idx) => (
               <input
@@ -276,19 +327,21 @@ const TwoFactorModal: React.FC<TwoFactorModalProps> = ({ isOpen, onClose, onSucc
                 maxLength={1}
                 value={digit}
                 onChange={(e) => handleChange(idx, e.target.value)}
-                className={`w-10 h-12 text-center text-xl font-bold rounded-lg border focus:ring-2 focus:outline-none transition-all ${
-                  error ? 'border-red-300 bg-red-50 text-red-600' : 'border-slate-300 bg-slate-50 text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-white'
+                className={`w-10 h-12 text-center text-xl font-bold font-mono rounded-lg border bg-transparent focus:ring-2 focus:ring-cyan-500/50 focus:outline-none transition-all ${
+                  error ? 'border-red-500/50 text-red-500' : 'border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white'
                 }`}
               />
             ))}
           </div>
-          {error && <div className="text-xs text-red-600 dark:text-red-400">Code incorrect. (Essai: 123456)</div>}
-          <button onClick={verifyCode} disabled={isVerifying} className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold">
-            {isVerifying ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'Vérifier'}
-          </button>
-          <button onClick={onClose} className="w-full py-2 text-slate-500 hover:text-slate-900 dark:hover:text-white text-sm">Annuler</button>
+          {error && <div className="text-xs text-red-500 font-medium">Code incorrect. (Essai: 123456)</div>}
+          <div className="w-full space-y-3">
+            <button onClick={verifyCode} disabled={isVerifying} className="w-full py-3 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl font-bold shadow-lg shadow-cyan-500/30 transition-all font-mono">
+              {isVerifying ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'VERIFY IDENTITY'}
+            </button>
+            <button onClick={onClose} className="w-full py-2 text-slate-500 hover:text-slate-900 dark:hover:text-white text-sm transition-colors">Annuler</button>
+          </div>
         </div>
-      </div>
+      </SpotlightCard>
     </div>
   );
 };
@@ -302,20 +355,20 @@ const App = () => {
   const [vaultItems, setVaultItems] = useState<VaultItem[]>(MOCK_VAULT_ITEMS);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSourceFilter, setSelectedSourceFilter] = useState<string>('ALL');
-  const [showRioModal, setShowRioModal] = useState(false);
-  const [generatedRio, setGeneratedRio] = useState('');
+  const [showDlsModal, setShowDlsModal] = useState(false);
+  const [generatedDls, setGeneratedDls] = useState('');
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
-  const [analysisStep, setAnalysisStep] = useState(0); // 0: Idle, 1: Indexing, 2: Extracting, 3: Finalizing
-  const [isDarkMode, setIsDarkMode] = useState(true); // Default Dark Mode
+  const [analysisStep, setAnalysisStep] = useState(0); 
+  const [isDarkMode, setIsDarkMode] = useState(true); 
   const [selectedDimensionProvider, setSelectedDimensionProvider] = useState<string>('ALL');
   const [selectedChartFilter, setSelectedChartFilter] = useState<string | null>(null);
   const [is2FAOpen, setIs2FAOpen] = useState(false);
   const [pending2FAAction, setPending2FAAction] = useState<(() => void) | null>(null);
   const [itemToDelete, setItemToDelete] = useState<VaultItem | null>(null);
   const [isInfoOpen, setIsInfoOpen] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  // Settings State
   const [enabledSources, setEnabledSources] = useState<Record<string, boolean>>({
     'ChatGPT': true, 'Claude': true, 'Gemini': true
   });
@@ -330,7 +383,6 @@ const App = () => {
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
-  // Filter vault items
   const filteredItems = vaultItems.filter(item => {
     const matchesSearch = item.summary.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           item.source.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -371,25 +423,30 @@ const App = () => {
     }
   };
 
-  const handleDeleteClick = (item: VaultItem) => setItemToDelete(item);
+  const handleDeleteClick = (item: VaultItem) => {
+    setItemToDelete(item);
+    setShowDeleteModal(true);
+  };
+  
   const confirmDelete = () => {
     if (itemToDelete) {
       setVaultItems(vaultItems.filter(i => i.id !== itemToDelete.id));
       setItemToDelete(null);
+      setShowDeleteModal(false);
     }
   };
 
-  const generateRio = () => {
-    const parts = ['AIG', Math.floor(Math.random() * 90 + 10).toString(), 'P', Math.random().toString(36).substr(2, 6).toUpperCase(), Math.random().toString(36).substr(2, 3).toUpperCase()];
-    setGeneratedRio(parts.join(''));
+  const generateDls = () => {
+    const parts = ['DLS', Math.floor(Math.random() * 90 + 10).toString(), 'X', Math.random().toString(36).substr(2, 6).toUpperCase(), Math.random().toString(36).substr(2, 3).toUpperCase()];
+    setGeneratedDls(parts.join('-'));
   };
 
   const runAnalysis = async () => {
     setAnalyzing(true);
-    setAnalysisStep(1); // Indexing
+    setAnalysisStep(1); 
     
-    setTimeout(() => setAnalysisStep(2), 1500); // Extracting
-    setTimeout(() => setAnalysisStep(3), 3000); // Finalizing
+    setTimeout(() => setAnalysisStep(2), 1500); 
+    setTimeout(() => setAnalysisStep(3), 3000); 
 
     setTimeout(async () => {
       const summaries = vaultItems.filter(i => enabledSources[i.source] !== false).map(i => i.summary);
@@ -442,23 +499,50 @@ const App = () => {
       return acc;
     }, {} as Record<string, number>);
     return [
-      { name: 'Conversations', count: counts['conversation'] || 0, color: '#3b82f6', type: 'conversation' }, 
+      { name: 'Conversations', count: counts['conversation'] || 0, color: '#06b6d4', type: 'conversation' }, 
       { name: 'Code', count: counts['code'] || 0, color: '#10b981', type: 'code' }, 
-      { name: 'Images', count: counts['image'] || 0, color: '#8b5cf6', type: 'image' }, 
+      { name: 'Images', count: counts['image'] || 0, color: '#d946ef', type: 'image' }, 
     ];
   };
 
   const getRecommendations = () => {
     const allTags = vaultItems.flatMap(i => i.tags);
     const recs = [];
-    if (allTags.includes('dev') || allTags.includes('react')) {
-      recs.push({ title: "Sécurité API", text: "Détecté : Code. Assurez-vous que vos clés API ne sont pas hardcodées.", icon: <Shield className="w-4 h-4 text-emerald-500" /> });
+    
+    if (allTags.some(t => ['dev', 'react', 'python', 'code'].includes(t))) {
+      recs.push({ 
+        title: "Sécurité & Bonnes Pratiques", 
+        text: "Code détecté. Pensez à scanner vos snippets pour éviter les fuites de secrets (API Keys).", 
+        icon: <Shield className="w-4 h-4 text-emerald-500" /> 
+      });
     }
-    if (allTags.includes('work') || allTags.includes('marketing')) {
-      recs.push({ title: "Veille Concurrentielle", text: "Analysez vos benchmarks marketing pour dégager des tendances.", icon: <TrendingUp className="w-4 h-4 text-blue-500" /> });
+    
+    if (allTags.some(t => ['work', 'marketing', 'business'].includes(t))) {
+      recs.push({ 
+        title: "Analyse de Marché", 
+        text: "Vos conversations contiennent des données stratégiques. Utilisez l'analyse IA pour synthétiser ces tendances.", 
+        icon: <TrendingUp className="w-4 h-4 text-cyan-500" /> 
+      });
     }
+
+    if (allTags.some(t => ['art', 'concept', 'design', 'image'].includes(t))) {
+       recs.push({ 
+        title: "Gestion des Assets", 
+        text: "Volume d'images important. Envisagez de taguer vos prompts pour une meilleure retrouvabilité.", 
+        icon: <Sparkles className="w-4 h-4 text-fuchsia-500" /> 
+      });
+    }
+
+    if (allTags.some(t => ['perso', 'travel', 'cooking', 'life'].includes(t))) {
+        recs.push({ 
+         title: "Equilibre de Vie", 
+         text: "Vos données personnelles sont riches. Créez des exports spécifiques pour ces souvenirs.", 
+         icon: <Heart className="w-4 h-4 text-rose-500" /> 
+       });
+     }
+    
     if (recs.length === 0) {
-      recs.push({ title: "Diversifiez vos sources", text: "Connectez d'autres IA pour enrichir votre profil.", icon: <Lightbulb className="w-4 h-4 text-yellow-500" /> });
+      recs.push({ title: "Enrichissez votre profil", text: "Connectez plus de sources pour obtenir des recommandations personnalisées.", icon: <Lightbulb className="w-4 h-4 text-yellow-500" /> });
     }
     return recs;
   };
@@ -471,27 +555,43 @@ const App = () => {
     return Array.from(new Set(items.flatMap(i => i.tags)));
   };
 
-  // --- Render Functions ---
+  const Footer = () => (
+    <footer className="bg-slate-50 dark:bg-slate-950 text-slate-400 py-12 border-t border-slate-200 dark:border-white/5 relative z-10 transition-colors duration-500">
+      <div className="max-w-7xl mx-auto px-4 text-center">
+        <p className="mb-4 font-mono text-sm tracking-wide">© 2026 AIGuardian. Sovereignty is non-negotiable.</p>
+        <div className="flex justify-center gap-6 text-sm">
+          <button onClick={() => { setView(ViewState.PRIVACY); window.scrollTo(0,0); }} className="hover:text-cyan-500 dark:hover:text-cyan-400 transition-colors">Confidentialité</button>
+          <button onClick={() => { setView(ViewState.LEGAL); window.scrollTo(0,0); }} className="hover:text-cyan-500 dark:hover:text-cyan-400 transition-colors">Mentions Légales</button>
+          <button onClick={() => { setView(ViewState.TERMS); window.scrollTo(0,0); }} className="hover:text-cyan-500 dark:hover:text-cyan-400 transition-colors">CGU</button>
+        </div>
+      </div>
+    </footer>
+  );
 
   const renderLanding = () => (
-    <div className="flex flex-col min-h-screen">
-      <header className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-30 border-b border-slate-200 dark:border-slate-800">
+    <div className="flex flex-col min-h-screen relative overflow-hidden bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-white transition-colors duration-500">
+      <BackgroundBeams />
+      
+      <header className="fixed top-0 left-0 right-0 z-50 bg-white/70 dark:bg-slate-950/60 backdrop-blur-xl border-b border-slate-200/50 dark:border-white/5 transition-all duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
-          <div className="flex items-center gap-2">
-            <Shield className="w-8 h-8 text-blue-600 dark:text-blue-500" />
-            <span className="text-xl font-bold text-slate-900 dark:text-white">AIGuardian</span>
+          <div className="flex items-center gap-2 group cursor-pointer" onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})}>
+            <div className="relative">
+              <div className="absolute inset-0 bg-cyan-500 blur-lg opacity-20 animate-pulse group-hover:opacity-40 transition-opacity"></div>
+              <Shield className="w-8 h-8 text-blue-600 dark:text-cyan-400 relative z-10" />
+            </div>
+            <span className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-400">AIGuardian</span>
           </div>
           <nav className="hidden md:flex gap-8">
-            <a href="#features" className="text-slate-600 dark:text-slate-300 hover:text-blue-600 font-medium">Fonctionnalités</a>
-            <a href="#security" className="text-slate-600 dark:text-slate-300 hover:text-blue-600 font-medium">Sécurité</a>
-            <a href="#pricing" className="text-slate-600 dark:text-slate-300 hover:text-blue-600 font-medium">Tarifs</a>
+            <a href="#features" className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors">Fonctionnalités</a>
+            <a href="#security" className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors">Sécurité</a>
+            <a href="#tips" className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors">Conseils</a>
           </nav>
           <div className="hidden md:flex gap-4 items-center">
-            <button onClick={toggleTheme} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400">
+            <button onClick={toggleTheme} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-white/5 text-slate-600 dark:text-slate-400 transition-colors">
               {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
-            <button onClick={handleLogin} className="text-slate-600 dark:text-slate-300 hover:text-slate-900 font-medium">Connexion</button>
-            <button onClick={handleLogin} className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-medium">Créer un compte</button>
+            <button onClick={handleLogin} className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">Connexion</button>
+            <button onClick={handleLogin} className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white px-5 py-2 rounded-full font-medium text-sm shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all transform hover:-translate-y-0.5">Créer un compte</button>
           </div>
           <div className="md:hidden flex items-center gap-4">
               <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-slate-900 dark:text-white"><Menu /></button>
@@ -499,75 +599,143 @@ const App = () => {
         </div>
       </header>
 
-      <main className="flex-grow">
-        <section className="pt-20 pb-32 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-slate-100 dark:from-slate-900 dark:to-slate-950 -z-10"></div>
-          <div className="max-w-7xl mx-auto px-4 text-center">
-            <h1 className="text-4xl md:text-6xl font-extrabold text-slate-900 dark:text-white mb-6">
-              Reprenez le contrôle de <br className="hidden md:block"/><span className="text-blue-600 dark:text-blue-400">vos données d'IA</span>
+      <main className="flex-grow pt-32 pb-20 px-4 relative z-10 scroll-smooth">
+        <div className="max-w-7xl mx-auto text-center space-y-12">
+          
+          {/* Hero Section */}
+          <div className="space-y-6">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-cyan-50 dark:bg-cyan-900/10 border border-cyan-100 dark:border-cyan-500/20 text-xs font-mono font-medium text-cyan-700 dark:text-cyan-400 animate-in fade-in slide-in-from-bottom-4 duration-700 shadow-[0_0_10px_rgba(6,182,212,0.1)]">
+              <Sparkles className="w-3 h-3" /> Compatible Gemini 2.0 & GPT-5
+            </div>
+            
+            <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-slate-900 dark:text-white animate-in fade-in slide-in-from-bottom-6 duration-700 delay-100">
+              Datas Local Secure.<br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-500 via-blue-500 to-fuchsia-500 animate-gradient-x">L'avenir est souverain.</span>
             </h1>
-            <p className="text-lg md:text-xl text-slate-600 dark:text-slate-300 max-w-2xl mx-auto mb-10">
-              Centralisez, sécurisez et transférez vos historiques de conversations générés par l'IA. Conformité RGPD et souveraineté totale.
+            
+            <p className="text-lg md:text-xl text-slate-600 dark:text-slate-300 max-w-2xl mx-auto leading-relaxed animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200">
+              Centralisez vos historiques d'IA dans un coffre-fort chiffré AES-256. 
+              <span className="block mt-2 text-slate-500 dark:text-slate-400 text-base">Traitement 100% Client-Side. Zéro transfert serveur.</span>
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button onClick={handleLogin} className="bg-blue-600 hover:bg-blue-700 text-white text-lg px-8 py-4 rounded-xl font-bold shadow-xl">Commencer gratuitement</button>
+
+            <div className="flex flex-col sm:flex-row gap-4 justify-center pt-8 animate-in fade-in slide-in-from-bottom-10 duration-700 delay-300">
+              <button onClick={handleLogin} className="group relative px-8 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-full font-bold text-lg shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:shadow-[0_0_30px_rgba(6,182,212,0.5)] transition-all overflow-hidden">
+                <span className="relative z-10 flex items-center gap-2">Débuter l'expérience DLS <ArrowUpRight className="w-5 h-5" /></span>
+              </button>
             </div>
           </div>
-        </section>
-        {/* Features section omitted for brevity but would exist here */}
+
+          {/* Features Section */}
+          <div id="features" className="pt-24 scroll-mt-24">
+             <h2 className="text-3xl font-bold mb-12 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100"><span className="text-cyan-500">Fonctionnalités</span> Cyber-Souveraines</h2>
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+              {[
+                { icon: <Lock className="w-6 h-6 text-cyan-500" />, title: "Chiffrement Neural", desc: "Clé DLS AES-256 générée localement. Vos données sont indéchiffrables sans votre action." },
+                { icon: <Database className="w-6 h-6 text-blue-500" />, title: "Stockage Isolé", desc: "IndexedDB chiffré. Vos pensées restent sur votre silicium, pas dans le cloud." },
+                { icon: <Share2 className="w-6 h-6 text-fuchsia-500" />, title: "Portabilité DLS", desc: "Le protocole DLS permet de migrer votre 'âme numérique' d'une IA à l'autre." }
+              ].map((feature, i) => (
+                <SpotlightCard key={i} className="p-8 text-left hover:-translate-y-2 transition-transform duration-500 group border-slate-200 dark:border-white/5 dark:hover:border-cyan-500/30">
+                  <div className="mb-6 p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl w-fit group-hover:scale-110 transition-transform duration-500 shadow-inner">{feature.icon}</div>
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3 group-hover:text-cyan-400 transition-colors">{feature.title}</h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{feature.desc}</p>
+                </SpotlightCard>
+              ))}
+            </div>
+          </div>
+
+          {/* Security Section */}
+          <div id="security" className="pt-24 scroll-mt-24">
+             <div className="bg-slate-900 text-white rounded-3xl p-12 relative overflow-hidden border border-white/10 shadow-2xl">
+                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-cyan-500/10 rounded-full blur-[100px] animate-pulse-slow"></div>
+                <div className="relative z-10 flex flex-col md:flex-row items-center gap-12">
+                   <div className="flex-1 text-left space-y-6">
+                      <div className="inline-block px-3 py-1 bg-cyan-500/20 text-cyan-300 text-xs font-mono rounded-full">ARCHITECTURE ZERO-TRUST</div>
+                      <h2 className="text-3xl md:text-4xl font-bold">Sécurité de niveau militaire. <br/>Par défaut.</h2>
+                      <p className="text-slate-300 leading-relaxed">
+                        Notre code est open-source et audité. Le chiffrement se fait à la volée dans la mémoire RAM de votre navigateur via l'API Web Crypto. Aucune donnée en clair ne touche jamais un disque dur.
+                      </p>
+                      <ul className="space-y-3 pt-4">
+                        {["Chiffrement Client-Side AES-GCM", "Pas de cookies tiers", "Anonymat total (Pas d'email requis)"].map(item => (
+                          <li key={item} className="flex items-center gap-3 text-sm font-mono text-cyan-200">
+                             <CheckCircle2 className="w-4 h-4 text-cyan-500" /> {item}
+                          </li>
+                        ))}
+                      </ul>
+                   </div>
+                   <div className="flex-1 flex justify-center">
+                      <Shield className="w-64 h-64 text-cyan-500/80 drop-shadow-[0_0_30px_rgba(6,182,212,0.4)]" />
+                   </div>
+                </div>
+             </div>
+          </div>
+
+          {/* Advice/Conseils Section (ex-Pricing) */}
+          <div id="tips" className="pt-24 pb-12 scroll-mt-24">
+            <h2 className="text-3xl font-bold mb-12 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100">Conseils pour une <span className="text-fuchsia-500">IA Souveraine</span></h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+               {[
+                 { title: "Local First", text: "Privilégiez les modèles exécutés localement (Llama 3, Mistral) via des outils comme Ollama pour les données ultra-sensibles.", color: "text-emerald-400", border: "border-emerald-500/20" },
+                 { title: "Nettoyage Périodique", text: "Utilisez AIGuardian pour auditer votre historique et supprimer les conversations contenant des PII (Infos Personnelles).", color: "text-blue-400", border: "border-blue-500/20" },
+                 { title: "Diversification", text: "Ne dépendez pas d'un seul fournisseur. Exportez vos données régulièrement via le format DLS.", color: "text-fuchsia-400", border: "border-fuchsia-500/20" },
+                 { title: "Vigilance Prompt", text: "Ne donnez jamais vos mots de passe ou clés privées à une IA, même 'de confiance'.", color: "text-rose-400", border: "border-rose-500/20" }
+               ].map((tip, idx) => (
+                 <SpotlightCard key={idx} className={`p-6 text-left border ${tip.border} hover:bg-slate-900/80 transition-all`}>
+                    <h3 className={`font-mono font-bold text-lg mb-3 ${tip.color}`}>{tip.title}</h3>
+                    <p className="text-sm text-slate-400 leading-relaxed">{tip.text}</p>
+                 </SpotlightCard>
+               ))}
+            </div>
+          </div>
+
+        </div>
       </main>
       <Footer />
     </div>
   );
 
-  const Footer = () => (
-    <footer className="bg-slate-900 text-slate-400 py-12 border-t border-slate-800">
-      <div className="max-w-7xl mx-auto px-4 text-center">
-        <p className="mb-4">© 2023 AIGuardian. Tous droits réservés.</p>
-        <div className="flex justify-center gap-6 text-sm">
-          <button onClick={() => { setView(ViewState.PRIVACY); window.scrollTo(0,0); }} className="hover:text-white">Confidentialité</button>
-          <button onClick={() => { setView(ViewState.LEGAL); window.scrollTo(0,0); }} className="hover:text-white">Mentions Légales</button>
-          <button onClick={() => { setView(ViewState.TERMS); window.scrollTo(0,0); }} className="hover:text-white">CGU</button>
-        </div>
-      </div>
-    </footer>
-  );
-
   const renderSidebar = () => (
-    <aside className="hidden lg:flex flex-col w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 fixed inset-y-0 z-20">
-      <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center gap-2">
-        <Shield className="w-6 h-6 text-blue-600 dark:text-blue-500" />
-        <span className="font-bold text-lg text-slate-900 dark:text-white">AIGuardian</span>
+    <aside className="hidden lg:flex flex-col w-72 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-r border-slate-200/60 dark:border-white/5 fixed inset-y-0 z-30 transition-all">
+      <div className="p-6 flex items-center gap-3">
+        <div className="relative group">
+            <div className="absolute inset-0 bg-cyan-500 blur opacity-40 group-hover:opacity-60 transition-opacity duration-500"></div>
+            <Shield className="w-7 h-7 text-blue-600 dark:text-cyan-400 relative z-10" />
+        </div>
+        <span className="font-bold text-xl text-slate-900 dark:text-white tracking-tight font-sans">AIGuardian</span>
       </div>
-      <div className="px-6 py-4">
-          <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-3 border border-slate-100 dark:border-slate-700">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-              <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase">Système Sécurisé</span>
+      
+      <div className="px-6 py-2">
+          <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 rounded-xl p-4 border border-slate-200 dark:border-white/5 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-cyan-500/10 rounded-full blur-2xl group-hover:bg-cyan-500/20 transition-all duration-500"></div>
+            <div className="flex items-center gap-2 mb-2 relative z-10">
+              <div className="w-2 h-2 rounded-full bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.8)] animate-pulse"></div>
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wide font-mono">Secure Core</span>
             </div>
-            <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
-              AES-256 • Local Storage
+            <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono relative z-10">
+              AES-256 • DLS Protocol
             </div>
           </div>
       </div>
-      <nav className="flex-1 p-4 space-y-2">
+
+      <nav className="flex-1 px-4 py-6 space-y-1">
         {[
           { id: ViewState.DASHBOARD, icon: Database, label: 'Mon Coffre-fort' },
           { id: ViewState.PROFILE, icon: BrainCircuit, label: 'Profil de Connaissances' },
-          { id: ViewState.RIO, icon: Share2, label: 'Portabilité (RIO)' },
+          { id: ViewState.DLS, icon: Share2, label: 'Portabilité (DLS)' },
           { id: ViewState.SETTINGS, icon: Settings, label: 'Paramètres' },
         ].map(item => (
           <button 
             key={item.id}
             onClick={() => setView(item.id)} 
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${view === item.id ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 group relative overflow-hidden ${view === item.id ? 'bg-cyan-50 dark:bg-cyan-900/10 text-cyan-700 dark:text-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.1)] border border-cyan-100 dark:border-cyan-500/20' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-slate-200'}`}
           >
-            <item.icon className="w-5 h-5" /> {item.label}
+            <item.icon className={`w-5 h-5 transition-transform group-hover:scale-110 ${view === item.id ? 'text-cyan-600 dark:text-cyan-400' : 'text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300'}`} /> 
+            {item.label}
           </button>
         ))}
       </nav>
-      <div className="p-4 border-t border-slate-100 dark:border-slate-800">
-        <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-2 text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 text-sm font-medium">
+      
+      <div className="p-4 border-t border-slate-200/60 dark:border-white/5 mx-4 mb-4">
+        <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 text-slate-500 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 rounded-xl text-sm font-medium transition-colors">
           <LogOut className="w-4 h-4" /> Déconnexion
         </button>
       </div>
@@ -575,34 +743,40 @@ const App = () => {
   );
 
   const renderDashboard = () => (
-    <div className="space-y-6">
-      <div className="bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-800 rounded-lg p-4 flex items-start gap-3">
-        <Shield className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
-        <div>
-          <h4 className="text-sm font-bold text-indigo-900 dark:text-indigo-200">Architecture Zero-Knowledge Active</h4>
-          <p className="text-xs text-indigo-700 dark:text-indigo-300 mt-1">
-            Vos données sont chiffrées avec votre clé privée. Ni AIGuardian, ni les fournisseurs ne peuvent les lire.
-          </p>
-        </div>
-      </div>
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <SpotlightCard className="p-1 !bg-transparent !border-none !shadow-none overflow-visible">
+          <div className="relative overflow-hidden bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-200/30 dark:border-cyan-500/20 rounded-2xl p-6 flex items-start gap-4 backdrop-blur-sm">
+            <div className="p-2 bg-cyan-100 dark:bg-cyan-500/20 rounded-lg shadow-[0_0_10px_rgba(6,182,212,0.3)]">
+                <Shield className="w-6 h-6 text-cyan-600 dark:text-cyan-400" />
+            </div>
+            <div>
+            <h4 className="text-base font-bold text-slate-900 dark:text-white font-mono">Architecture Zero-Knowledge</h4>
+            <p className="text-sm text-slate-600 dark:text-slate-300 mt-1 leading-relaxed max-w-2xl">
+                Toutes les opérations de chiffrement sont effectuées côté client. Votre clé privée ne quitte jamais votre appareil, garantissant une confidentialité mathématique.
+            </p>
+            </div>
+          </div>
+      </SpotlightCard>
 
-      <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
-        <div className="relative w-full md:w-96">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+      <div className="flex flex-col md:flex-row gap-4 justify-between items-center sticky top-20 z-20 py-2">
+        <div className="relative w-full md:w-96 group">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Search className="h-5 w-5 text-slate-400 group-focus-within:text-cyan-500 transition-colors" />
+          </div>
           <input 
             type="text" 
             placeholder="Rechercher..." 
-            className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white"
+            className="block w-full pl-10 pr-4 py-3 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md border border-slate-200 dark:border-white/10 rounded-2xl focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 focus:outline-none text-slate-900 dark:text-white shadow-sm transition-all"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide w-full md:w-auto">
+        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide w-full md:w-auto p-1 bg-slate-100/50 dark:bg-slate-900/50 backdrop-blur-md rounded-2xl border border-slate-200 dark:border-white/5">
           {uniqueSources.map(source => (
             <button
               key={source}
               onClick={() => setSelectedSourceFilter(source)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${selectedSourceFilter === source ? 'bg-blue-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'}`}
+              className={`px-4 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all duration-200 ${selectedSourceFilter === source ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-md transform scale-105 border border-slate-100 dark:border-white/10' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
             >
               {source === 'ALL' ? 'Tout' : source}
             </button>
@@ -610,31 +784,42 @@ const App = () => {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+      <div className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-md rounded-2xl border border-slate-200 dark:border-white/5 shadow-sm overflow-hidden">
         <table className="w-full text-left">
-          <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
+          <thead className="bg-slate-50/50 dark:bg-slate-800/30 border-b border-slate-200 dark:border-white/5">
             <tr>
-              <th className="px-6 py-4 font-semibold text-slate-600 dark:text-slate-400 text-sm">Source</th>
-              <th className="px-6 py-4 font-semibold text-slate-600 dark:text-slate-400 text-sm">Résumé</th>
-              <th className="px-6 py-4 font-semibold text-slate-600 dark:text-slate-400 text-sm">Type</th>
-              <th className="px-6 py-4 font-semibold text-slate-600 dark:text-slate-400 text-sm">Date</th>
-              <th className="px-6 py-4 font-semibold text-slate-600 dark:text-slate-400 text-sm">Action</th>
+              <th className="px-6 py-4 font-semibold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider font-mono">Source</th>
+              <th className="px-6 py-4 font-semibold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider font-mono">Contenu</th>
+              <th className="px-6 py-4 font-semibold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider font-mono">Type</th>
+              <th className="px-6 py-4 font-semibold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider font-mono">Date</th>
+              <th className="px-6 py-4 font-semibold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider text-right font-mono">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+          <tbody className="divide-y divide-slate-100 dark:divide-white/5">
             {filteredItems.map(item => (
-              <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+              <tr key={item.id} className="hover:bg-cyan-50/50 dark:hover:bg-white/5 transition-colors group">
                 <td className="px-6 py-4">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300">
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${
+                      item.source === 'ChatGPT' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20' : 
+                      item.source === 'Claude' ? 'bg-orange-50 dark:bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-500/20' :
+                      'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/20'
+                  }`}>
                     {item.source}
                   </span>
                 </td>
-                <td className="px-6 py-4 text-slate-900 dark:text-slate-200 font-medium">{item.summary}</td>
+                <td className="px-6 py-4">
+                    <p className="text-slate-900 dark:text-slate-200 font-medium truncate max-w-xs">{item.summary}</p>
+                    <div className="flex gap-1 mt-1">
+                        {item.tags.map(tag => <span key={tag} className="text-[10px] text-slate-400 font-mono">#{tag}</span>)}
+                    </div>
+                </td>
                 <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-sm capitalize">{item.type}</td>
-                <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-sm">{item.date}</td>
-                <td className="px-6 py-4 flex gap-3">
-                  <button onClick={() => handleSecureAction(() => downloadEncryptedItem(item))} className="text-slate-400 hover:text-blue-600" title="Télécharger"><Download className="w-4 h-4" /></button>
-                  <button onClick={() => handleDeleteClick(item)} className="text-slate-400 hover:text-red-600" title="Supprimer"><Trash2 className="w-4 h-4" /></button>
+                <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-sm font-mono">{item.date}</td>
+                <td className="px-6 py-4">
+                  <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => handleSecureAction(() => downloadEncryptedItem(item))} className="p-2 text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 dark:hover:bg-cyan-900/20 rounded-lg transition-colors" title="Télécharger"><Download className="w-4 h-4" /></button>
+                    <button onClick={() => handleDeleteClick(item)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors" title="Supprimer"><Trash2 className="w-4 h-4" /></button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -645,70 +830,74 @@ const App = () => {
   );
 
   const renderProfile = () => (
-    <div className="grid md:grid-cols-2 gap-8">
+    <div className="grid md:grid-cols-2 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="space-y-6">
         {/* Analysis Card */}
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
-          <div className="flex justify-between items-start mb-4">
-             <h3 className="font-bold text-lg text-slate-900 dark:text-white flex items-center gap-2">
-              <BrainCircuit className="w-5 h-5 text-indigo-600 dark:text-indigo-400" /> Analyse IA
-            </h3>
-            <button onClick={() => setIsInfoOpen(!isInfoOpen)} className="text-slate-400 hover:text-indigo-500"><Info className="w-4 h-4" /></button>
+        <SpotlightCard className="p-6">
+          <div className="flex justify-between items-start mb-6">
+             <div className="flex items-center gap-3">
+                 <div className="p-2.5 bg-cyan-50 dark:bg-cyan-500/20 rounded-xl shadow-[0_0_10px_rgba(6,182,212,0.2)]">
+                    <BrainCircuit className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
+                 </div>
+                 <h3 className="font-bold text-lg text-slate-900 dark:text-white">Analyse IA</h3>
+             </div>
+            <button onClick={() => setIsInfoOpen(!isInfoOpen)} className="text-slate-400 hover:text-cyan-500 transition-colors"><Info className="w-5 h-5" /></button>
           </div>
           
           {isInfoOpen && (
-            <div className="mb-4 text-xs bg-slate-50 dark:bg-slate-900 p-3 rounded text-slate-600 dark:text-slate-400 border border-slate-100 dark:border-slate-700">
+            <div className="mb-6 text-sm bg-slate-50 dark:bg-white/5 p-4 rounded-xl text-slate-600 dark:text-slate-400 border border-slate-100 dark:border-white/5 leading-relaxed animate-in fade-in">
               L'analyse est effectuée par un modèle Gemini s'exécutant dans un environnement sandboxé. Vos données brutes ne sont pas conservées par le fournisseur.
             </div>
           )}
 
           {!aiAnalysis && !analyzing && (
-            <>
-              <p className="text-slate-600 dark:text-slate-400 mb-6 text-sm">Générez un profil basé sur vos données chiffrées.</p>
-              <button onClick={runAnalysis} className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium shadow-md">
-                Générer mon profil de connaissances
+            <div className="text-center py-8">
+              <p className="text-slate-500 dark:text-slate-400 mb-8 text-sm max-w-xs mx-auto">Générez un profil cognitif complet basé sur vos données chiffrées.</p>
+              <button onClick={runAnalysis} className="w-full py-4 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-xl font-bold shadow-lg shadow-cyan-500/25 transition-all transform hover:scale-[1.02]">
+                Lancer l'analyse sécurisée
               </button>
-            </>
+            </div>
           )}
 
           {analyzing && (
-            <div className="space-y-4 py-4">
-              <div className="flex justify-between text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide">
-                <span>Progression</span>
+            <div className="space-y-6 py-6">
+              <div className="flex justify-between text-xs font-bold text-cyan-600 dark:text-cyan-400 uppercase tracking-wider font-mono">
+                <span>Traitement en cours</span>
                 <span>{analysisStep === 1 ? '30%' : analysisStep === 2 ? '60%' : '90%'}</span>
               </div>
-              <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2">
-                <div className={`h-2 rounded-full bg-indigo-500 transition-all duration-500`} style={{ width: analysisStep === 1 ? '30%' : analysisStep === 2 ? '60%' : '90%' }}></div>
+              <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                <div className={`h-1.5 rounded-full bg-cyan-500 transition-all duration-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]`} style={{ width: analysisStep === 1 ? '30%' : analysisStep === 2 ? '60%' : '90%' }}></div>
               </div>
-              <p className="text-center text-sm text-slate-500 dark:text-slate-400 animate-pulse">
-                {analysisStep === 1 ? "Indexation des sources chiffrées..." : analysisStep === 2 ? "Extraction des entités clés..." : "Finalisation du profil..."}
-              </p>
+              <div className="flex items-center justify-center gap-3 text-sm text-slate-500 dark:text-slate-400">
+                <Loader2 className="w-4 h-4 animate-spin text-cyan-500" />
+                <span className="font-mono">{analysisStep === 1 ? "Indexation des sources chiffrées..." : analysisStep === 2 ? "Extraction des entités clés..." : "Finalisation du profil..."}</span>
+              </div>
             </div>
           )}
 
           {aiAnalysis && (
-            <div className="space-y-4 animate-in fade-in">
-              <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-lg border border-indigo-100 dark:border-indigo-800 text-indigo-900 dark:text-indigo-200 text-sm leading-relaxed">
+            <div className="space-y-6 animate-in fade-in">
+              <div className="bg-gradient-to-br from-cyan-50 to-blue-50 dark:from-cyan-900/20 dark:to-blue-900/10 p-5 rounded-2xl border border-cyan-100/50 dark:border-cyan-500/20 text-cyan-900 dark:text-cyan-100 text-sm leading-7 shadow-inner">
                 {aiAnalysis}
               </div>
-              <button onClick={() => handleSecureAction(downloadProfile)} className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg text-sm font-medium transition-colors">
-                <Download className="w-4 h-4" /> Télécharger le Profil
+              <button onClick={() => handleSecureAction(downloadProfile)} className="w-full flex items-center justify-center gap-2 px-4 py-3 border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5 rounded-xl text-sm font-medium transition-colors text-slate-700 dark:text-slate-300">
+                <Download className="w-4 h-4" /> Télécharger le Profil Complet
               </button>
             </div>
           )}
-        </div>
+        </SpotlightCard>
 
         {/* Dimensions */}
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
-          <div className="flex justify-between items-center mb-6">
+        <SpotlightCard className="p-6">
+          <div className="flex justify-between items-center mb-8">
             <h3 className="font-bold text-lg text-slate-900 dark:text-white">Dimensions</h3>
-            <div className="flex gap-1">
+            <div className="flex p-1 bg-slate-100 dark:bg-slate-900 rounded-lg">
                {['ALL', 'ChatGPT', 'Claude'].map(p => (
-                 <button key={p} onClick={() => setSelectedDimensionProvider(p)} className={`px-2 py-1 text-[10px] rounded ${selectedDimensionProvider === p ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-500'}`}>{p}</button>
+                 <button key={p} onClick={() => setSelectedDimensionProvider(p)} className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${selectedDimensionProvider === p ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>{p}</button>
                ))}
             </div>
           </div>
-          <div className="space-y-1">
+          <div className="space-y-2">
             {PROFILE_DIMENSIONS_DATA.map((dim, index) => (
               <AnimatedProgressBar 
                 key={dim.label} 
@@ -717,27 +906,37 @@ const App = () => {
               />
             ))}
           </div>
-        </div>
+        </SpotlightCard>
       </div>
 
       <div className="space-y-6">
         {/* Distribution Chart */}
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col min-h-[350px]">
-           <div className="flex justify-between mb-2">
+        <SpotlightCard className="p-6 flex flex-col min-h-[350px]">
+           <div className="flex justify-between items-center mb-6">
               <h3 className="font-bold text-lg text-slate-900 dark:text-white">Distribution</h3>
               {selectedChartFilter && (
-                <button onClick={() => setSelectedChartFilter(null)} className="text-xs text-blue-500 hover:underline">Réinitialiser</button>
+                <button onClick={() => setSelectedChartFilter(null)} className="text-xs px-2 py-1 bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400 rounded-md hover:bg-cyan-200 transition-colors">Réinitialiser filtre</button>
               )}
            </div>
-           <p className="text-xs text-slate-500 mb-4">Cliquez sur une barre pour filtrer les sujets.</p>
-           <div className="flex-1 w-full min-h-[200px]">
+           
+           <div className="flex-1 w-full min-h-[220px]">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={getChartData()} onClick={(data) => { if(data?.activePayload?.[0]) setSelectedChartFilter(data.activePayload[0].payload.type) }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#334155" : "#e2e8f0"} vertical={false} />
-                  <XAxis dataKey="name" stroke={isDarkMode ? "#94a3b8" : "#64748b"} />
-                  <YAxis stroke={isDarkMode ? "#94a3b8" : "#64748b"} />
-                  <Tooltip cursor={{fill: 'transparent'}} contentStyle={{backgroundColor: isDarkMode ? '#1e293b' : '#fff', borderRadius: '8px', border: 'none'}} />
-                  <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                <BarChart data={getChartData()} onClick={(data: any) => { if(data?.activePayload?.[0]) setSelectedChartFilter(data.activePayload[0].payload.type) }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"} vertical={false} />
+                  <XAxis dataKey="name" stroke={isDarkMode ? "#94a3b8" : "#64748b"} tick={{fontSize: 12, fontFamily: 'monospace'}} axisLine={false} tickLine={false} dy={10} />
+                  <YAxis stroke={isDarkMode ? "#94a3b8" : "#64748b"} tick={{fontSize: 12, fontFamily: 'monospace'}} axisLine={false} tickLine={false} dx={-10} />
+                  <Tooltip 
+                    cursor={{fill: isDarkMode ? 'rgba(6, 182, 212, 0.05)' : 'rgba(0,0,0,0.05)'}} 
+                    contentStyle={{
+                        backgroundColor: isDarkMode ? 'rgba(2, 6, 23, 0.9)' : 'rgba(255, 255, 255, 0.9)', 
+                        borderRadius: '12px', 
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)',
+                        backdropFilter: 'blur(8px)',
+                        color: isDarkMode ? '#fff' : '#000'
+                    }} 
+                  />
+                  <Bar dataKey="count" radius={[4, 4, 0, 0]} barSize={40}>
                      {getChartData().map((entry, index) => (
                        <Cell key={`cell-${index}`} fill={entry.color} opacity={selectedChartFilter && selectedChartFilter !== entry.type ? 0.3 : 1} cursor="pointer" />
                      ))}
@@ -745,140 +944,153 @@ const App = () => {
                 </BarChart>
               </ResponsiveContainer>
            </div>
-        </div>
+        </SpotlightCard>
 
         {/* Recommendations & Tags */}
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
-           <h3 className="font-bold text-lg mb-4 text-slate-900 dark:text-white">Sujets & Recommandations</h3>
-           <div className="flex flex-wrap gap-2 mb-6">
+        <SpotlightCard className="p-6">
+           <h3 className="font-bold text-lg mb-6 text-slate-900 dark:text-white">Recommandations</h3>
+           <div className="flex flex-wrap gap-2 mb-8">
              {getFilteredTags().map(tag => (
-               <span key={tag} className="px-3 py-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-full text-sm">#{tag}</span>
+               <span key={tag} className="px-3 py-1.5 bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 text-slate-600 dark:text-slate-300 rounded-full text-xs font-mono font-medium hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-default">#{tag}</span>
              ))}
            </div>
            <div className="space-y-3">
              {getRecommendations().map((rec, i) => (
-               <div key={i} className="flex gap-3 p-3 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-100 dark:border-slate-700">
-                 <div className="mt-1">{rec.icon}</div>
+               <div key={i} className="flex gap-4 p-4 bg-slate-50/50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-white/5 hover:border-cyan-200 dark:hover:border-cyan-500/30 transition-colors group">
+                 <div className="mt-0.5 p-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm group-hover:scale-110 transition-transform">{rec.icon}</div>
                  <div>
-                   <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">{rec.title}</h4>
-                   <p className="text-xs text-slate-500 dark:text-slate-400">{rec.text}</p>
+                   <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 group-hover:text-cyan-500 transition-colors">{rec.title}</h4>
+                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">{rec.text}</p>
                  </div>
                </div>
              ))}
            </div>
-        </div>
+        </SpotlightCard>
       </div>
     </div>
   );
 
   const renderSettings = () => (
-    <div className="max-w-4xl mx-auto space-y-8">
-      <div className="bg-white dark:bg-slate-800 p-8 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
-          <Settings className="w-5 h-5" /> Gestion des Sources
+    <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <SpotlightCard className="p-8">
+        <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-8 flex items-center gap-3">
+          <div className="p-2 bg-blue-100 dark:bg-blue-500/20 rounded-lg"><Settings className="w-5 h-5 text-blue-600 dark:text-blue-400" /></div>
+          Gestion des Sources
         </h2>
         <div className="space-y-4">
           {Object.entries(enabledSources).map(([source, enabled]) => (
-            <div key={source} className="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-900 rounded-lg">
+            <div key={source} className="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-white/5">
               <span className="font-medium text-slate-700 dark:text-slate-300">{source}</span>
               <button 
                 onClick={() => setEnabledSources(prev => ({...prev, [source]: !prev[source]}))}
-                className={`text-2xl ${enabled ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'}`}
+                className={`text-3xl transition-colors ${enabled ? 'text-cyan-600 dark:text-cyan-400' : 'text-slate-300 dark:text-slate-600'}`}
               >
                 {enabled ? <ToggleRight /> : <ToggleLeft />}
               </button>
             </div>
           ))}
         </div>
-      </div>
+      </SpotlightCard>
 
-      <div className="bg-white dark:bg-slate-800 p-8 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
-          <Key className="w-5 h-5" /> Sécurité Avancée
+      <SpotlightCard className="p-8">
+        <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-8 flex items-center gap-3">
+          <div className="p-2 bg-emerald-100 dark:bg-emerald-500/20 rounded-lg"><Key className="w-5 h-5 text-emerald-600 dark:text-emerald-400" /></div>
+          Sécurité Avancée
         </h2>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-white/5">
           <div>
-             <h3 className="font-medium text-slate-800 dark:text-slate-200">Rotation des clés</h3>
-             <p className="text-sm text-slate-500">Ré-encryptez toutes vos données avec une nouvelle clé AES.</p>
+             <h3 className="font-bold text-slate-800 dark:text-slate-200 text-sm">Rotation des clés</h3>
+             <p className="text-xs text-slate-500 mt-1">Ré-encryptez toutes vos données avec une nouvelle clé AES.</p>
           </div>
-          <button onClick={() => handleSecureAction(rotateKeys)} className="px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+          <button onClick={() => handleSecureAction(rotateKeys)} className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-cyan-500 dark:hover:border-cyan-500 rounded-lg text-sm font-medium transition-all flex items-center gap-2 shadow-sm">
             <RefreshCw className="w-4 h-4" /> Rotation
           </button>
         </div>
-      </div>
+      </SpotlightCard>
 
-      <div className="bg-white dark:bg-slate-800 p-8 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
-          <History className="w-5 h-5" /> Historique d'Analyse
+      <SpotlightCard className="p-8">
+        <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-8 flex items-center gap-3">
+          <div className="p-2 bg-fuchsia-100 dark:bg-fuchsia-500/20 rounded-lg"><History className="w-5 h-5 text-fuchsia-600 dark:text-fuchsia-400" /></div>
+          Historique d'Analyse
         </h2>
-        <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
+        <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-white/5">
           <table className="w-full text-left text-sm">
-             <thead className="bg-slate-50 dark:bg-slate-900">
+             <thead className="bg-slate-50 dark:bg-white/5">
                <tr>
-                 <th className="px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Date</th>
-                 <th className="px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Score</th>
-                 <th className="px-4 py-3 font-semibold text-slate-600 dark:text-slate-400">Résumé</th>
+                 <th className="px-6 py-4 font-semibold text-slate-500 dark:text-slate-400 font-mono">Date</th>
+                 <th className="px-6 py-4 font-semibold text-slate-500 dark:text-slate-400 font-mono">Score</th>
+                 <th className="px-6 py-4 font-semibold text-slate-500 dark:text-slate-400 font-mono">Résumé</th>
                </tr>
              </thead>
-             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+             <tbody className="divide-y divide-slate-100 dark:divide-white/5">
                {MOCK_HISTORY.map(h => (
-                 <tr key={h.id}>
-                   <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{h.date}</td>
-                   <td className="px-4 py-3 text-emerald-600 font-bold">{h.score}%</td>
-                   <td className="px-4 py-3 text-slate-600 dark:text-slate-400 truncate max-w-xs">{h.summary}</td>
+                 <tr key={h.id} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
+                   <td className="px-6 py-4 text-slate-700 dark:text-slate-300 font-mono text-xs">{h.date}</td>
+                   <td className="px-6 py-4">
+                        <span className="px-2 py-1 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 rounded-md font-bold text-xs">{h.score}%</span>
+                   </td>
+                   <td className="px-6 py-4 text-slate-600 dark:text-slate-400 truncate max-w-xs">{h.summary}</td>
                  </tr>
                ))}
              </tbody>
           </table>
         </div>
-      </div>
+      </SpotlightCard>
     </div>
   );
 
   const renderStaticPage = (title: string, content: React.ReactNode) => (
     <div className="max-w-4xl mx-auto py-12 px-6">
-      <button onClick={() => setView(ViewState.DASHBOARD)} className="mb-8 flex items-center gap-2 text-slate-500 hover:text-slate-900 dark:hover:text-white">
-        <ChevronUp className="w-4 h-4 rotate-[-90deg]" /> Retour au tableau de bord
+      <button onClick={() => setView(ViewState.DASHBOARD)} className="mb-8 flex items-center gap-2 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors group">
+        <div className="p-1 rounded-full bg-slate-100 dark:bg-slate-800 group-hover:bg-cyan-100 dark:group-hover:bg-cyan-900/30 transition-colors">
+            <ChevronUp className="w-4 h-4 rotate-[-90deg] group-hover:-translate-x-0.5 transition-transform" />
+        </div>
+        <span className="text-sm font-medium">Retour au tableau de bord</span>
       </button>
-      <div className="bg-white dark:bg-slate-800 p-8 md:p-12 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-8">{title}</h1>
-        <div className="prose dark:prose-invert max-w-none text-slate-600 dark:text-slate-300">
+      <SpotlightCard className="p-12">
+        <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-8 border-b border-slate-100 dark:border-white/5 pb-6">{title}</h1>
+        <div className="prose dark:prose-invert max-w-none text-slate-600 dark:text-slate-300 leading-8">
           {content}
         </div>
-      </div>
+      </SpotlightCard>
     </div>
   );
-
-  // --- Main Render Switch ---
 
   if (view === ViewState.LANDING) return renderLanding();
 
   const mainContent = () => {
     switch(view) {
       case ViewState.PROFILE: return renderProfile();
-      case ViewState.RIO: return (
-        // Re-implementing simplified RIO view inline for brevity as functionality was moved to modal, 
-        // but sticking to requested architecture.
-        <div className="flex flex-col items-center justify-center h-[50vh]">
-            <Share2 className="w-16 h-16 text-slate-200 dark:text-slate-700 mb-4" />
-            <p className="text-slate-500">Utilisez le bouton "Obtenir mon RIO" dans le menu.</p>
-            <button onClick={() => setShowRioModal(true)} className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg">Ouvrir RIO</button>
+      case ViewState.DLS: return (
+        <div className="flex flex-col items-center justify-center h-[60vh] animate-in fade-in zoom-in duration-500">
+            <SpotlightCard className="p-12 text-center max-w-md mx-auto shadow-[0_0_50px_rgba(6,182,212,0.15)] border-cyan-500/30">
+                <div className="w-24 h-24 bg-cyan-50 dark:bg-cyan-900/20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+                    <Share2 className="w-12 h-12 text-cyan-500" />
+                </div>
+                <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2 font-mono">DLS PORTABILITY</h3>
+                <p className="text-slate-500 dark:text-slate-400 mb-8 leading-relaxed">
+                    Générez une clé DLS unique pour transférer votre profil de connaissances chiffré vers un autre agent ou système compatible.
+                </p>
+                <button onClick={() => setShowDlsModal(true)} className="w-full px-6 py-4 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-xl font-bold shadow-lg shadow-cyan-500/20 transition-all tracking-wide">
+                    INITIALISER PROTOCOLE DLS
+                </button>
+            </SpotlightCard>
         </div>
       );
       case ViewState.SETTINGS: return renderSettings();
       case ViewState.PRIVACY: return renderStaticPage("Politique de Confidentialité", (
-        <div className="space-y-4">
+        <div className="space-y-6">
           <p>Dernière mise à jour : {new Date().toLocaleDateString()}</p>
-          <h3 className="text-xl font-bold text-slate-800 dark:text-white mt-4">1. Collecte de données</h3>
+          <h3 className="text-xl font-bold text-slate-800 dark:text-white mt-8">1. Collecte de données</h3>
           <p>AIGuardian applique un principe de minimisation stricte. Nous ne collectons aucune donnée personnelle sur nos serveurs. Vos conversations importées restent stockées exclusivement dans le `localStorage` de votre navigateur ou dans une base de données IndexedDB locale chiffrée.</p>
-          <h3 className="text-xl font-bold text-slate-800 dark:text-white mt-4">2. Usage des données</h3>
+          <h3 className="text-xl font-bold text-slate-800 dark:text-white mt-8">2. Usage des données</h3>
           <p>Les données ne sont traitées que pour générer votre profil de connaissances. Aucune donnée n'est partagée avec des tiers, ni utilisée pour entraîner des modèles d'IA.</p>
-          <h3 className="text-xl font-bold text-slate-800 dark:text-white mt-4">3. Vos droits</h3>
+          <h3 className="text-xl font-bold text-slate-800 dark:text-white mt-8">3. Vos droits</h3>
           <p>Conformément au RGPD, vous disposez d'un droit d'accès, de rectification et d'effacement. Puisque nous n'hébergeons pas vos données, la suppression de votre cache navigateur ou l'utilisation du bouton "Supprimer" dans l'application suffit à exercer votre droit à l'oubli.</p>
         </div>
       ));
       case ViewState.LEGAL: return renderStaticPage("Mentions Légales", (
-        <div className="space-y-4">
+        <div className="space-y-6">
           <p><strong>Éditeur :</strong> AIGuardian SAS</p>
           <p><strong>Siège social :</strong> 123 Avenue de la Data, 75000 Paris, France</p>
           <p><strong>Contact :</strong> legal@aiguardian.io</p>
@@ -886,9 +1098,9 @@ const App = () => {
         </div>
       ));
       case ViewState.TERMS: return renderStaticPage("Conditions Générales d'Utilisation", (
-        <div className="space-y-4">
-          <h3 className="text-xl font-bold text-slate-800 dark:text-white mt-4">Responsabilité de la clé</h3>
-          <p>L'utilisateur est seul responsable de la conservation de son RIO et de ses clés d'exportation. AIGuardian ne disposant pas de double des clés, toute perte est définitive.</p>
+        <div className="space-y-6">
+          <h3 className="text-xl font-bold text-slate-800 dark:text-white mt-8">Responsabilité de la clé</h3>
+          <p>L'utilisateur est seul responsable de la conservation de sa clé DLS et de ses clés d'exportation. AIGuardian ne disposant pas de double des clés, toute perte est définitive.</p>
         </div>
       ));
       default: return renderDashboard();
@@ -896,79 +1108,107 @@ const App = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex transition-colors duration-300 font-sans">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex transition-colors duration-500 font-sans selection:bg-cyan-500/30">
+      <BackgroundBeams />
+      
       {renderSidebar()}
       
-      {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 z-20 flex justify-between items-center">
+      <div className="lg:hidden fixed top-0 left-0 right-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-white/5 p-4 z-40 flex justify-between items-center">
          <div className="flex items-center gap-2">
-            <Shield className="w-6 h-6 text-blue-600" />
+            <Shield className="w-6 h-6 text-cyan-600" />
             <span className="font-bold text-slate-900 dark:text-white">AIGuardian</span>
          </div>
          <button onClick={() => setIsMenuOpen(true)} className="text-slate-900 dark:text-white"><Menu /></button>
       </div>
 
-      {/* Main Container */}
-      <div className="lg:ml-64 flex-1 flex flex-col min-w-0 pt-16 lg:pt-0">
+      <div className="lg:ml-72 flex-1 flex flex-col min-w-0 pt-16 lg:pt-0 relative z-10">
         {(view !== ViewState.PRIVACY && view !== ViewState.LEGAL && view !== ViewState.TERMS) && (
-          <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10 hidden lg:block">
-            <div className="px-6 py-4 flex justify-between items-center">
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
-                {view === ViewState.DASHBOARD ? 'Mon Coffre-fort' : view === ViewState.PROFILE ? 'Profil de Connaissances' : view === ViewState.SETTINGS ? 'Paramètres' : 'Portabilité'}
+          <header className="sticky top-0 z-30 hidden lg:block bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-slate-200/60 dark:border-white/5 transition-all">
+            <div className="px-8 py-5 flex justify-between items-center">
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight font-mono">
+                {view === ViewState.DASHBOARD ? '// MON_COFFRE_FORT' : view === ViewState.PROFILE ? '// PROFIL_COGNITIF' : view === ViewState.SETTINGS ? '// PARAMETRES_SYSTEME' : '// PROTOCOLE_DLS'}
               </h1>
               <div className="flex items-center gap-4">
-                <button onClick={toggleTheme} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400">
+                <button onClick={toggleTheme} className="p-2.5 rounded-full hover:bg-white dark:hover:bg-white/5 text-slate-600 dark:text-slate-400 transition-all border border-transparent hover:border-slate-200 dark:hover:border-white/5">
                   {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
                 </button>
-                <button onClick={() => setShowImport(true)} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
-                  <Plus className="w-4 h-4" /> Importer
+                <button onClick={() => setShowImport(true)} className="bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-200 text-white dark:text-slate-900 px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-lg shadow-slate-900/20 dark:shadow-white/10 hover:shadow-xl hover:-translate-y-0.5">
+                  <Plus className="w-4 h-4" /> IMPORTER
                 </button>
-                <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700"></div>
+                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-500 border-2 border-white dark:border-slate-800 shadow-[0_0_15px_rgba(6,182,212,0.5)]"></div>
               </div>
             </div>
           </header>
         )}
 
-        <main className="p-6 md:p-8 overflow-y-auto flex-1">
+        <main className="p-6 md:p-10 overflow-y-auto flex-1">
           {mainContent()}
         </main>
 
-        {(view === ViewState.DASHBOARD || view === ViewState.PROFILE || view === ViewState.SETTINGS) && (
-           <footer className="p-6 border-t border-slate-200 dark:border-slate-800 text-center text-xs text-slate-400">
-             <div className="flex justify-center gap-4 mb-2">
-                <button onClick={() => setView(ViewState.PRIVACY)} className="hover:underline">Confidentialité</button>
-                <button onClick={() => setView(ViewState.LEGAL)} className="hover:underline">Mentions</button>
-                <button onClick={() => setView(ViewState.TERMS)} className="hover:underline">CGU</button>
+        {(view === ViewState.DASHBOARD || view === ViewState.PROFILE || view === ViewState.SETTINGS || view === ViewState.DLS) && (
+           <footer className="p-8 border-t border-slate-200/60 dark:border-white/5 text-center text-xs text-slate-400">
+             <div className="flex justify-center gap-6 mb-4">
+                <button onClick={() => setView(ViewState.PRIVACY)} className="hover:text-cyan-500 dark:hover:text-cyan-400 transition-colors">Confidentialité</button>
+                <button onClick={() => setView(ViewState.LEGAL)} className="hover:text-cyan-500 dark:hover:text-cyan-400 transition-colors">Mentions</button>
+                <button onClick={() => setView(ViewState.TERMS)} className="hover:text-cyan-500 dark:hover:text-cyan-400 transition-colors">CGU</button>
              </div>
-             <p>AIGuardian v1.2.0 • Conformité RGPD • Chiffrement AES-256</p>
+             <p className="opacity-60 font-mono">AIGuardian v2.0.4 • DLS Protocol Enabled • AES-256-GCM</p>
            </footer>
         )}
       </div>
 
-      {/* Modals */}
-      {showRioModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-md w-full p-6 relative">
-            <button onClick={() => setShowRioModal(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-900 dark:hover:text-white"><X className="w-5 h-5" /></button>
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-4">Générer RIO</h3>
-            {!generatedRio ? (
-               <div className="text-center space-y-4">
-                  <p className="text-sm text-slate-500">Créez une clé de transfert portable pour exporter votre profil.</p>
-                  <button onClick={() => handleSecureAction(generateRio)} className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold">Générer</button>
+      {showDlsModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <SpotlightCard className="max-w-md w-full p-6 !bg-white/90 dark:!bg-slate-950/90 border-cyan-500/30">
+            <button onClick={() => setShowDlsModal(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><X className="w-5 h-5" /></button>
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-6 font-mono">GÉNÉRATION CLÉ DLS</h3>
+            {!generatedDls ? (
+               <div className="text-center space-y-6">
+                  <div className="p-4 bg-cyan-50 dark:bg-cyan-900/20 rounded-xl text-sm text-cyan-800 dark:text-cyan-200 border border-cyan-100 dark:border-cyan-500/30">
+                    Cette clé cryptographique permet le transfert sécurisé de votre profil vers un autre système compatible DLS.
+                  </div>
+                  <button onClick={() => handleSecureAction(generateDls)} className="w-full py-4 bg-cyan-600 text-white rounded-xl font-bold shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/30 transition-all font-mono">GÉNÉRER CLÉ UNIQUE</button>
                </div>
             ) : (
-               <div className="text-center space-y-4">
-                  <div className="p-4 bg-slate-100 dark:bg-slate-900 rounded font-mono text-xl font-bold select-all">{generatedRio}</div>
-                  <p className="text-xs text-amber-600">Ne partagez ce code qu'avec le destinataire de confiance.</p>
+               <div className="text-center space-y-6 animate-in zoom-in-95">
+                  <div className="p-6 bg-slate-100 dark:bg-black/40 rounded-xl border border-slate-200 dark:border-cyan-500/30 font-mono text-2xl font-bold tracking-widest select-all text-slate-800 dark:text-cyan-400 shadow-[inset_0_2px_10px_rgba(0,0,0,0.3)]">
+                    {generatedDls}
+                  </div>
+                  <p className="text-xs text-amber-600 dark:text-amber-400 font-medium flex items-center justify-center gap-2">
+                    <AlertTriangle className="w-4 h-4" /> Ne partagez ce code qu'avec le destinataire de confiance.
+                  </p>
                </div>
             )}
-          </div>
+          </SpotlightCard>
+        </div>
+      )}
+
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-md flex items-center justify-center p-4">
+          <SpotlightCard className="max-w-sm w-full p-6 !bg-white dark:!bg-slate-900 border-red-100 dark:border-red-900/30">
+            <div className="text-center space-y-4">
+              <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center mx-auto mb-2">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Supprimer définitivement ?</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                Cette action est irréversible. L'élément sera effacé de votre stockage local (localStorage).
+              </p>
+              <div className="flex gap-3 pt-2">
+                <button onClick={() => setShowDeleteModal(false)} className="flex-1 py-2.5 text-slate-600 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-white/5 rounded-lg transition-colors">
+                  Annuler
+                </button>
+                <button onClick={confirmDelete} className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold shadow-lg shadow-red-500/20 transition-all">
+                  Supprimer
+                </button>
+              </div>
+            </div>
+          </SpotlightCard>
         </div>
       )}
 
       {showImport && <ImportWizard onComplete={handleImportComplete} onCancel={() => setShowImport(false)} />}
       <TwoFactorModal isOpen={is2FAOpen} onClose={() => setIs2FAOpen(false)} onSuccess={on2FASuccess} />
-      {/* Delete Modal omitted for brevity but logic exists */}
       
       <CookieBanner />
     </div>

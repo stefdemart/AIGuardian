@@ -3,7 +3,7 @@ export enum ViewState {
   LANDING = 'LANDING',
   DASHBOARD = 'DASHBOARD',
   IMPORT = 'IMPORT',
-  RIO = 'RIO',
+  DLS = 'DLS',
   PROFILE = 'PROFILE',
   SETTINGS = 'SETTINGS',
   PRIVACY = 'PRIVACY',
@@ -26,7 +26,7 @@ export interface UserProfile {
   email: string;
   totalItems: number;
   lastBackup: string;
-  rioKey?: string;
+  dlsKey?: string;
 }
 
 export interface ChartData {
